@@ -52,35 +52,48 @@ const url = 'https://otd.delhi.gov.in/api/realtime/VehiclePositions.pb?key=7pnJf
 
 let busData = [];
 let busStops = [];
+let routeMap = new Map(); // Map to store route_id -> route_name
 const clientZoomLevels = new Map();
 const ZOOM_THRESHOLD = 14;
 
 // Parse CSV data
 const parseCSV = (csvString) => {
   return new Promise((resolve, reject) => {
-    const stops = [];
+    const data = [];
     csv.parse(csvString, { columns: true, skip_empty_lines: true })
       .on('data', (row) => {
-        stops.push({
-          name: row.stop_name || 'Unknown Stop',
-          latitude: parseFloat(row.stop_lat),
-          longitude: parseFloat(row.stop_lon)
-        });
+        data.push(row);
       })
-      .on('end', () => resolve(stops))
+      .on('end', () => resolve(data))
       .on('error', (err) => reject(err));
   });
 };
 
-// Read and parse CSV
-const csvFilePath = 'data/stops.csv';
-const csvString = fs.readFileSync(csvFilePath, 'utf8');
-parseCSV(csvString)
+// Read and parse stops CSV
+const stopsCsvFilePath = 'data/stops.csv';
+const stopsCsvString = fs.readFileSync(stopsCsvFilePath, 'utf8');
+parseCSV(stopsCsvString)
   .then(stops => {
-    busStops = stops;
+    busStops = stops.map(row => ({
+      name: row.stop_name || 'Unknown Stop',
+      latitude: parseFloat(row.stop_lat),
+      longitude: parseFloat(row.stop_lon)
+    }));
     console.log(`Parsed ${busStops.length} bus stops from CSV`);
   })
-  .catch(err => console.error('Error parsing CSV:', err));
+  .catch(err => console.error('Error parsing stops CSV:', err));
+
+// Read and parse routename CSV
+const routeCsvFilePath = 'data/routename.csv';
+const routeCsvString = fs.readFileSync(routeCsvFilePath, 'utf8');
+parseCSV(routeCsvString)
+  .then(routes => {
+    routes.forEach(row => {
+      routeMap.set(row.route_id, row.route_name);
+    });
+    console.log(`Parsed ${routeMap.size} routes from routename.csv`);
+  })
+  .catch(err => console.error('Error parsing routename CSV:', err));
 
 // Fetch bus data with retry logic
 const fetchBusData = async () => {
@@ -97,6 +110,7 @@ const fetchBusData = async () => {
         .map(entity => ({
           busNo: entity.vehicle.vehicle.id || 'Unknown',
           routeNo: entity.vehicle.trip?.routeId || 'Unknown',
+          routeName: routeMap.get(entity.vehicle.trip?.routeId) || entity.vehicle.trip?.routeId || 'Unknown',
           latitude: entity.vehicle.position.latitude,
           longitude: entity.vehicle.position.longitude,
         }));
