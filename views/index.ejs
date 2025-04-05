@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real-Time Bus Tracker</title>
-    <link rel="stylesheet" href="Control.FullScreen.css" />
-    <script src="Control.FullScreen.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -119,33 +117,23 @@
             left: 0;
         }
 
-        .map-container.fullscreen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            max-width: none;
-            z-index: 9999;
-            border-radius: 0;
-        }
 
         .bus-label {
-            background: rgba(255, 164, 235, 0.8);
+            background: rgb(65, 233, 121);
             border: 1px solid #570047;
             padding: 1px 3px;
             font-size: 8px;
             font-weight: bold;
             text-align: center;
             border-radius: 2px;
-            color: #570047;
+            color: #000000;
             pointer-events: none;
             opacity: 1;
             transition: opacity 0.3s ease;
         }
 
         .bus-dot {
-            background: #ff69b4;
+            background: #006400;
             border-radius: 50%;
             pointer-events: none;
         }
@@ -493,6 +481,16 @@
             opacity: 1;
         }
 
+        .user-location-icon svg {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
         #checkModal {
             display: none;
             position: fixed;
@@ -505,6 +503,28 @@
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
             z-index: 10001;
             color: black;
+            min-width: 80%;
+        }
+
+        #checkModal input[type="number"] {
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 8px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        #checkModal form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #checkModal .button-container {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
         }
     </style>
 </head>
@@ -545,7 +565,7 @@
                     <thead>
                         <tr>
                             <th>Bus No</th>
-                            <th>Route No</th>
+                            <th>Route Name</th>
                             <th>Distance</th>
                             <th>Checked</th>
                             <th>Action</th>
@@ -648,8 +668,10 @@
             <input type="number" id="nonTicketHolders" name="nonTicketHolders" min="0" required><br><br>
             <label for="fineCollected">Fine Collected (Rs):</label><br>
             <input type="number" id="fineCollected" name="fineCollected" min="0" step="1" required><br><br>
-            <button type="submit" class="navbar-button">Submit</button>
-            <button type="button" class="navbar-button" onclick="closeCheckModal()">Cancel</button>
+            <div class="button-container">
+                <button type="submit" class="navbar-button">Submit</button>
+                <button type="button" class="navbar-button" onclick="closeCheckModal()">Cancel</button>
+            </div>
         </form>
     </div>
 
@@ -662,8 +684,11 @@
             zoomControl: false
         });
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        // Use Jawg.Streets theme only
+        L.tileLayer('https://tile.jawg.io/jawg-streets/{z}/{x}/{y}{r}.png?access-token=yY3fr8FU86SQBCMHs2a8Fk3X3ef9sOjQ5yZspu3Bl16bSAjGC6dx4evddIDcMxG5', {
+            attribution: '<a href="https://jawg.io" title="Tiles Courtesy of Jawg Maps" target="_blank">© <b>Jawg</b>Maps</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            minZoom: 0,
+            maxZoom: 22
         }).addTo(map);
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -703,7 +728,7 @@
         let currentFilter = 'all';
         let hasGeoPermission = false;
         const ZOOM_THRESHOLD = 14;
-        const BUS_LABEL_SIZE = [30, 15];
+        const BUS_LABEL_SIZE = [40, 20];
 
         const initialBuses = <%- JSON.stringify(buses) %> || [];
         let initialBusStops = <%- JSON.stringify(busStops) %> || [];
@@ -749,7 +774,7 @@
             nearestBuses.forEach(bus => {
                 html += `
                     <li>
-                        Bus ${bus.busNo} (Route: ${bus.routeNo})<br>
+                        Bus ${bus.busNo} (Route: ${bus.routeName})<br>
                         Distance: ${bus.distance.toFixed(2)} km
                     </li>
                 `;
@@ -760,7 +785,7 @@
 
             document.getElementById('nearest-stop').innerHTML = `Nearest Stop<b> ${nearestStop.name} (${(nearestStop.distance * 1000).toFixed(0)}m)</b>`;
             if (nearestBuses.length > 0) {
-                document.getElementById('bus-arriving').innerHTML = `Bus <b>${nearestBuses[0].busNo}</b>`;
+                document.getElementById('bus-arriving').innerHTML = `Bus <b>${nearestBuses[0].busNo} (${nearestBuses[0].routeName})</b>`;
             } else {
                 document.getElementById('bus-arriving').innerText = `Bus Arriving: None`;
             }
@@ -773,7 +798,7 @@
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td>${bus.busNo}</td>
-                            <td>${bus.routeNo}</td>
+                            <td>${bus.routeName}</td>
                             <td>${bus.distance.toFixed(2)} km</td>
                             <td><input type="checkbox" onchange="handleCheck('${bus.busNo}', this.checked, '${bus.routeNo}')"></td>
                             <td><button onclick="showCheckModal('${bus.busNo}', '${bus.routeNo}')">Details</button></td>
@@ -842,7 +867,7 @@
         };
 
         function adjustMarkerOpacity(zoom) {
-            const opacity = zoom > 16 ? 1 : zoom > 14 ? 0.7 : 0.4;
+            const opacity = zoom > 16 ? 1 : zoom > 11 ? 0.9 : 0.4;
             Object.values(busMarkers).forEach(marker => {
                 const element = marker.getElement();
                 if (element && element.classList.contains('bus-label')) {
@@ -874,7 +899,7 @@
             });
 
             visibleBuses.forEach(bus => {
-                const { busNo, latitude, longitude, routeNo } = bus;
+                const { busNo, latitude, longitude, routeNo, routeName } = bus;
 
                 const nearbyStop = stops.find(stop => 
                     calculateDistance(latitude, longitude, stop.latitude, stop.longitude) < 0.05
@@ -884,11 +909,11 @@
                     const marker = busMarkers[busNo];
                     const newLatLng = new L.LatLng(latitude, longitude);
                     animateMarker(marker, marker.getLatLng(), newLatLng);
-                    marker.setPopupContent(`Bus: ${busNo}<br>Route: ${routeNo}<br>Lat: ${latitude}<br>Lon: ${longitude}`);
+                    marker.setPopupContent(`Bus: ${busNo}<br>Route: ${routeName}<br>Lat: ${latitude}<br>Lon: ${longitude}`);
                     if (useLabels && !marker.getElement().classList.contains('bus-label')) {
                         marker.setIcon(L.divIcon({
                             className: 'bus-label',
-                            html: `${busNo} (${routeNo})`,
+                            html: `${routeName} (${busNo})`,
                             iconSize: BUS_LABEL_SIZE,
                             iconAnchor: [BUS_LABEL_SIZE[0] / 2, BUS_LABEL_SIZE[1] / 2]
                         }));
@@ -898,14 +923,14 @@
                 } else {
                     const icon = useLabels ? L.divIcon({
                         className: 'bus-label',
-                        html: `${busNo} (${routeNo})`,
+                        html: `${routeName} (${busNo})`,
                         iconSize: BUS_LABEL_SIZE,
                         iconAnchor: [BUS_LABEL_SIZE[0] / 2, BUS_LABEL_SIZE[1] / 2]
                     }) : busDotIcon;
 
                     const marker = L.marker([latitude, longitude], { icon })
                         .addTo(map)
-                        .bindPopup(`Bus: ${busNo}<br>Route: ${routeNo}<br>Lat: ${latitude}<br>Lon: ${longitude}`);
+                        .bindPopup(`Bus: ${busNo}<br>Route: ${routeName}<br>Lat: ${latitude}<br>Lon: ${longitude}`);
 
                     busMarkers[busNo] = marker;
                 }
