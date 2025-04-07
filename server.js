@@ -11,32 +11,6 @@ require('dotenv').config();
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-const cors = require('cors');
-
-app.use(cors({
-  origin: 'https://bus-19wu.onrender.com', // Replace with your frontend URL
-  methods: ['GET', 'POST', 'OPTIONS'], // Allow these methods
-  allowedHeaders: ['Content-Type', 'Authorization'], // Allow these headers
-}));
-
-// Parse JSON bodies
-app.use(express.json());
-
-// Example API route
-app.post('/api/checkBus', (req, res) => {
-  const { busNo, routeNo, nonTicketHolders, fineCollected } = req.body;
-  // Process the request and send a response
-  res.json({ success: true, message: 'Bus checked successfully' });
-});
-
-// Start the server
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
-
-
-
 
 
 app.use(express.static('public'));
