@@ -8,6 +8,7 @@
     <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* [Your existing CSS remains unchanged] */
         #map {
             height: 100%;
             width: 100%;
@@ -151,26 +152,26 @@
         .bus-dot {
             border-radius: 50%;
             pointer-events: none;
-            box-shadow: 0 0 3px rgba(0, 0, 0, 0.5); /* Blur effect */
+            box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
         }
 
         .stop-counter {
             width: 60px;
-            height: 8px; /* Increased height */
+            height: 8px;
             background: #ccc;
-            border-radius: 4px; /* Rounded edges for battery look */
+            border-radius: 4px;
             margin-top: 2px;
             pointer-events: none;
             position: relative;
             overflow: hidden;
-            border: 1px solid #666; /* Battery border */
+            border: 1px solid #666;
         }
 
         .stop-bar {
             height: 100%;
             background: #ff6666;
             transition: width 0.3s ease;
-            border-radius: 3px 0 0 3px; /* Rounded left side, flat right side */
+            border-radius: 3px 0 0 3px;
             position: relative;
         }
 
@@ -178,7 +179,6 @@
             background: #00ff00;
         }
 
-        /* Battery cap (small nub on the right) */
         .stop-counter::after {
             content: '';
             position: absolute;
@@ -956,24 +956,18 @@
                 initialBusStops.slice(0, 3)
             );
 
-            const busIndex = allBuses.findIndex(b => b.busNo === busNo);
-            if (busIndex !== -1) {
-                allBuses[busIndex] = { ...allBuses[busIndex], checked: true, stopsRemaining: 10 };
-                updateBusMarkers(allBuses, initialBusStops);
-            }
-
+            const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bus-v9k2.onrender.com';
             try {
-                const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bus-v9k2.onrender.com';
                 const response = await fetch(`${baseUrl}/api/checkBus`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
                 });
 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('Server responded with error:', response.status, errorText);
-                    throw new Error(`Server error: ${response.status} - ${errorText}`);
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
                 }
 
                 const result = await response.json();
@@ -999,10 +993,12 @@
                         })).sort((a, b) => a.distance - b.distance).slice(0, 4),
                         initialBusStops.slice(0, 3)
                     );
+                    console.log('Bus check submitted successfully!');
                 } else {
                     console.error('Error updating bus check:', result.error);
-                    alert('Error updating bus check: ' + result.error);
+                    console.log('Error updating bus check: ' + result.error);
                     updatingBuses.delete(busNo);
+                    const busIndex = allBuses.findIndex(b => b.busNo === busNo);
                     if (busIndex !== -1) {
                         allBuses[busIndex].checked = false;
                         updateBusMarkers(allBuses, initialBusStops);
@@ -1012,6 +1008,7 @@
                 console.error('Fetch error:', err);
                 alert('Error: ' + err.message);
                 updatingBuses.delete(busNo);
+                const busIndex = allBuses.findIndex(b => b.busNo === busNo);
                 if (busIndex !== -1) {
                     allBuses[busIndex].checked = false;
                     updateBusMarkers(allBuses, initialBusStops);
@@ -1415,7 +1412,7 @@
             e.preventDefault();
             const phoneNo = document.getElementById('phoneNo').value;
             const aadharNo = document.getElementById('aadharNo').value;
-            alert(`Challan submitted for Phone: ${phoneNo}, Aadhar: ${aadharNo}`);
+            console.log(`Challan submitted for Phone: ${phoneNo}, Aadhar: ${aadharNo}`);
             hideChallanPortal();
         };
 
@@ -1441,7 +1438,7 @@
 
                 const result = await response.json();
                 if (result.success) {
-                    alert('Attendance recorded successfully!');
+                    console.log('Attendance recorded successfully!');
                     hideAttendancePortal();
                 } else {
                     alert('Error recording attendance: ' + result.error);
@@ -1453,56 +1450,65 @@
         };
 
         function goToUserLocation(attempt = 1, maxAttempts = 3) {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    position => {
-                        const lat = position.coords.latitude;
-                        const lon = position.coords.longitude;
+            if (!navigator.geolocation) {
+                console.error('Geolocation is not supported by your browser.');
+                console.log('Geolocation is not supported by your browser.');
+                return;
+            }
 
-                        if (!userMarker) {
-                            userMarker = L.marker([lat, lon], { icon: userIcon }).addTo(map);
-                        } else {
-                            userMarker.setLatLng([lat, lon]);
-                        }
-                        map.setView([lat, lon], 15);
+            navigator.geolocation.getCurrentPosition(
+                position => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
 
-                        hasGeoPermission = true;
-                        const nearest = findNearestLocations(lat, lon, allBuses, initialBusStops);
-                        updateNearestDisplay(nearest.nearestStop, nearest.nearestBuses, nearest.nearbyStops);
-                        console.log('Geolocation success:', { lat, lon });
-                    },
-                    error => {
-                        console.error('Geolocation error:', error);
-                        let errorMessage = '';
+                    if (!userMarker) {
+                        userMarker = L.marker([lat, lon], { icon: userIcon }).addTo(map);
+                    } else {
+                        userMarker.setLatLng([lat, lon]);
+                    }
+                    map.setView([lat, lon], 15);
+
+                    hasGeoPermission = true;
+                    const nearest = findNearestLocations(lat, lon, allBuses, initialBusStops);
+                    updateNearestDisplay(nearest.nearestStop, nearest.nearestBuses, nearest.nearbyStops);
+                    console.log('Geolocation success:', { lat, lon });
+                },
+                error => {
+                    console.error('Geolocation error:', error);
+                    if (attempt <= maxAttempts) {
                         switch (error.code) {
                             case error.PERMISSION_DENIED:
-                                errorMessage = 'Location permission denied. Please enable it in your browser settings.';
+                                console.log('Location permission denied. Attempt:', attempt);
                                 hasGeoPermission = false;
+                                if (attempt === maxAttempts) {
+                                    console.log('Location permission denied. Please enable it in your browser settings.');
+                                }
                                 break;
                             case error.POSITION_UNAVAILABLE:
-                                errorMessage = 'Location information is unavailable. Please try again later.';
+                                console.log('Location information is unavailable. Attempt:', attempt);
+                                if (attempt === maxAttempts) {
+                                    console.log('Location information is unavailable. Please try again later.');
+                                }
                                 break;
                             case error.TIMEOUT:
-                                errorMessage = 'The request to get your location timed out. Please try again.';
+                                console.log('Location request timed out. Retrying... Attempt:', attempt);
+                                if (attempt < maxAttempts) {
+                                    setTimeout(() => goToUserLocation(attempt + 1, maxAttempts), 2000); // Retry after 2 seconds
+                                }
                                 break;
                             default:
-                                errorMessage = `Attempt ${attempt} failed with an unknown error.`;
-                                console.error('Unknown geolocation error details:', error.message);
+                                console.log('Unknown geolocation error. Attempt:', attempt);
                                 if (attempt < maxAttempts) {
-                                    console.log(`Retrying geolocation (attempt ${attempt + 1}/${maxAttempts})...`);
-                                    setTimeout(() => goToUserLocation(attempt + 1, maxAttempts), 1000);
-                                    return;
+                                    setTimeout(() => goToUserLocation(attempt + 1, maxAttempts), 2000); // Retry after 2 seconds
+                                } else {
+                                    console.log('Failed to get your location after multiple attempts. Please check your device settings or try again later.');
                                 }
-                                errorMessage += ' Please check your device settings or try again later.';
                                 break;
                         }
-                        alert(errorMessage);
-                    },
-                    { timeout: 10000, maximumAge: 0, enableHighAccuracy: true }
-                );
-            } else {
-                alert('Geolocation is not supported by your browser.');
-            }
+                    }
+                },
+                { timeout: 10000, maximumAge: 0, enableHighAccuracy: true }
+            );
         }
 
         function checkGeolocationPermission() {
@@ -1512,10 +1518,11 @@
                         hasGeoPermission = true;
                         goToUserLocation();
                     } else if (result.state === 'prompt') {
-                        goToUserLocation(); // Prompt user for permission
+                        goToUserLocation();
                     } else {
                         hasGeoPermission = false;
                         console.log('Geolocation permission denied.');
+                        goToUserLocation(); // Attempt to prompt user
                     }
                     result.onchange = () => {
                         hasGeoPermission = result.state === 'granted';
@@ -1523,12 +1530,10 @@
                     };
                 }).catch(err => {
                     console.error('Permissions API error:', err);
-                    if (navigator.geolocation) goToUserLocation();
+                    goToUserLocation();
                 });
-            } else if (navigator.geolocation) {
-                goToUserLocation();
             } else {
-                alert('Geolocation is not supported by your browser.');
+                goToUserLocation();
             }
         }
 

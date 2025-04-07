@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const axios = require('axios');
@@ -12,6 +13,13 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// Enable CORS
+app.use(cors({
+    origin: 'https://bus-19wu.onrender.com', // Replace with your frontend URL
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+}));
 
 app.use(express.static('public'));
 app.use(express.json());
@@ -137,6 +145,8 @@ const fetchBusData = async () => {
           if (check) {
             bus.checked = check.checked;
             bus.stopsRemaining = check.stopsRemaining || 0;
+            bus.nonTicketHolders = check.nonTicketHolders || 0;
+            bus.fineCollected = check.fineCollected || 0;
           }
 
           // Check proximity to stops and update stopsRemaining automatically
@@ -204,6 +214,8 @@ app.get('/', async (req, res) => {
       if (check) {
         bus.stopsRemaining = check.stopsRemaining || 0;
         bus.checked = check.checked;
+        bus.nonTicketHolders = check.nonTicketHolders || 0;
+        bus.fineCollected = check.fineCollected || 0;
       }
     });
   }
@@ -248,6 +260,8 @@ app.post('/api/checkBus', async (req, res) => {
     if (bus) {
       bus.checked = true;
       bus.stopsRemaining = 10;
+      bus.nonTicketHolders = nonTicketHolders;
+      bus.fineCollected = fineCollected;
     }
     io.emit('busUpdate', { buses: busData, busStops: clientZoomLevels.size > 0 && Math.max(...clientZoomLevels.values()) >= ZOOM_THRESHOLD ? busStops : [] });
 
@@ -315,3 +329,16 @@ async function startServer() {
 }
 
 startServer();
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received. Closing MongoDB connection...');
+  await client.close();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received. Closing MongoDB connection...');
+  await client.close();
+  process.exit(0);
+});
