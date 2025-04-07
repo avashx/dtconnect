@@ -956,7 +956,7 @@
                 initialBusStops.slice(0, 3)
             );
 
-            const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bus-v9k2.onrender.com';
+            const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bus-19wu.onrender.com';
             try {
                 const response = await fetch(`${baseUrl}/api/checkBus`, {
                     method: 'POST',
@@ -1423,7 +1423,7 @@
             const conductorId = document.getElementById('conductorId').value;
             const conductorWaiver = document.getElementById('conductorWaiver').value;
             
-            const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bus-v9k2.onrender.com';
+            const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bus-19wu.onrender.com';
             try {
                 const response = await fetch(`${baseUrl}/api/recordAttendance`, {
                     method: 'POST',

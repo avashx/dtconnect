@@ -13,13 +13,27 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Enable CORS
-app.use(cors({
-    origin: 'https://bus-19wu.onrender.com', // Replace with your frontend URL
+// CORS configuration
+const corsOptions = {
+    origin: function (origin, callback) {
+        const allowedOrigins = [
+            'https://bus-19wu.onrender.com', // Frontend URL
+            'http://localhost:3000'          // For local testing
+        ];
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
-}));
+    credentials: true,
+    optionsSuccessStatus: 200 // For legacy browsers
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handle preflight requests for all routes
 
 app.use(express.static('public'));
 app.use(express.json());
