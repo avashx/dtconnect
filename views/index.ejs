@@ -117,9 +117,15 @@
             left: 0;
         }
 
+        .bus-label-container {
+            display: block;
+            text-align: center;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
 
         .bus-label {
-            background: rgb(65, 233, 121);
+            background: #ff6666;
             border: 1px solid #570047;
             padding: 1px 3px;
             font-size: 8px;
@@ -127,15 +133,61 @@
             text-align: center;
             border-radius: 2px;
             color: #000000;
-            pointer-events: none;
             opacity: 1;
             transition: opacity 0.3s ease;
+            width: 60px;
+            display: inline-block;
+            line-height: 10px;
+        }
+
+        .bus-label.checked {
+            background: #00ff00;
+        }
+
+        .bus-label .bus-no {
+            font-size: 6px;
         }
 
         .bus-dot {
-            background: #006400;
             border-radius: 50%;
             pointer-events: none;
+            box-shadow: 0 0 3px rgba(0, 0, 0, 0.5); /* Blur effect */
+        }
+
+        .stop-counter {
+            width: 60px;
+            height: 8px; /* Increased height */
+            background: #ccc;
+            border-radius: 4px; /* Rounded edges for battery look */
+            margin-top: 2px;
+            pointer-events: none;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #666; /* Battery border */
+        }
+
+        .stop-bar {
+            height: 100%;
+            background: #ff6666;
+            transition: width 0.3s ease;
+            border-radius: 3px 0 0 3px; /* Rounded left side, flat right side */
+            position: relative;
+        }
+
+        .stop-bar.checked {
+            background: #00ff00;
+        }
+
+        /* Battery cap (small nub on the right) */
+        .stop-counter::after {
+            content: '';
+            position: absolute;
+            right: -3px;
+            top: 2px;
+            width: 2px;
+            height: 4px;
+            background: #666;
+            border-radius: 0 2px 2px 0;
         }
 
         .data {
@@ -273,6 +325,7 @@
             padding: 8px;
             text-align: left;
             border-bottom: 1px solid #555;
+            font-size: 10px;
         }
 
         .bus-table th {
@@ -287,6 +340,7 @@
             border: 2px solid #fff;
             border-radius: 4px;
             cursor: pointer;
+            position: relative;
         }
 
         .bus-table td input[type="checkbox"]:checked {
@@ -299,7 +353,9 @@
             position: absolute;
             color: #000;
             font-size: 14px;
-            transform: translate(2px, 2px);
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
         }
 
         .navbar-button {
@@ -310,12 +366,12 @@
             color: white;
             cursor: pointer;
             font-size: 16px;
-            margin: 5px 0;
+            margin: 10px 0;
             display: flex;
             align-items: center;
             gap: 10px;
             justify-content: center;
-            height: 60px;
+            height: 100px;
         }
 
         .navbar-button:hover {
@@ -388,14 +444,17 @@
         .analysis-page, .challan-portal, .attendance-portal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            max-height: 80vh;
             background: #1a1a1a;
             color: white;
             z-index: 1002;
             padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
             overflow-y: auto;
         }
 
@@ -423,7 +482,7 @@
             margin-top: 20px;
         }
 
-        .analysis-page input, .challan-portal input, .attendance-portal input {
+        .analysis-page input, .challan-portal input, .attendance-portal input, .attendance-portal select {
             padding: 8px;
             border-radius: 5px;
             border: 1px solid #555;
@@ -431,7 +490,20 @@
             color: white;
         }
 
-        .analysis-page input:focus, .challan-portal input:focus, .attendance-portal input:focus {
+        .attendance-portal select {
+            background: #2d2d2d;
+            border: 2px solid #555;
+            appearance: none;
+            padding: 10px;
+        }
+
+        #attendanceForm select {
+            padding: 10px;
+            line-height: inherit;
+            color: #000000;
+        }
+
+        .analysis-page input:focus, .challan-portal input:focus, .attendance-portal input:focus, .attendance-portal select:focus {
             outline: none;
             border-color: #00d363;
         }
@@ -442,8 +514,8 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 400px;
-            height: 400px;
+            width: 300px;
+            height: 300px;
             background: #fff;
             border-radius: 10px;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
@@ -568,7 +640,6 @@
                             <th>Route Name</th>
                             <th>Distance</th>
                             <th>Checked</th>
-                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -640,9 +711,9 @@
         <h2>Bus Challan Portal</h2>
         <form id="challanForm">
             <label for="phoneNo">Phone Number:</label><br>
-            <input type="tel" id="phoneNo" name="phoneNo" required><br><br>
+            <input type="tel" id="phoneNo" name="phoneNo" required><br>
             <label for="aadharNo">Aadhar Number:</label><br>
-            <input type="text" id="aadharNo" name="aadharNo" required><br><br>
+            <input type="text" id="aadharNo" name="aadharNo" required><br>
             <button type="submit" class="navbar-button">Submit Challan</button>
         </form>
     </div>
@@ -651,10 +722,18 @@
         <span class="close-btn" onclick="hideAttendancePortal()">×</span>
         <h2>Attendance Portal</h2>
         <form id="attendanceForm">
+            <label for="nearbyBuses">Select Bus:</label><br>
+            <select id="nearbyBuses" name="nearbyBuses" onchange="updateBusDetails()">
+                <option value="">Select a bus</option>
+            </select><br>
             <label for="busNo">Bus Number:</label><br>
-            <input type="text" id="busNo" name="busNo" required><br><br>
-            <label for="conductorName">Conductor Name:</label><br>
-            <input type="text" id="conductorName" name="conductorName" required><br><br>
+            <input type="text" id="busNo" name="busNo" required><br>
+            <label for="routeNo">Route No (Route Name):</label><br>
+            <input type="text" id="routeNo" name="routeNo" required><br>
+            <label for="conductorId">Conductor ID Number:</label><br>
+            <input type="text" id="conductorId" name="conductorId" required><br>
+            <label for="conductorWaiver">Conductor Waiver Number:</label><br>
+            <input type="text" id="conductorWaiver" name="conductorWaiver" required><br>
             <button type="submit" class="navbar-button">Submit Attendance</button>
         </form>
     </div>
@@ -665,9 +744,9 @@
             <input type="hidden" id="checkBusNo" name="busNo">
             <input type="hidden" id="checkRouteNo" name="routeNo">
             <label for="nonTicketHolders">Non-Ticket Holders:</label><br>
-            <input type="number" id="nonTicketHolders" name="nonTicketHolders" min="0" required><br><br>
+            <input type="number" id="nonTicketHolders" name="nonTicketHolders" min="0" required><br>
             <label for="fineCollected">Fine Collected (Rs):</label><br>
-            <input type="number" id="fineCollected" name="fineCollected" min="0" step="1" required><br><br>
+            <input type="number" id="fineCollected" name="fineCollected" min="0" step="1" required><br>
             <div class="button-container">
                 <button type="submit" class="navbar-button">Submit</button>
                 <button type="button" class="navbar-button" onclick="closeCheckModal()">Cancel</button>
@@ -684,7 +763,6 @@
             zoomControl: false
         });
 
-        // Use Jawg.Streets theme only
         L.tileLayer('https://tile.jawg.io/jawg-streets/{z}/{x}/{y}{r}.png?access-token=yY3fr8FU86SQBCMHs2a8Fk3X3ef9sOjQ5yZspu3Bl16bSAjGC6dx4evddIDcMxG5', {
             attribution: '<a href="https://jawg.io" title="Tiles Courtesy of Jawg Maps" target="_blank">© <b>Jawg</b>Maps</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             minZoom: 0,
@@ -695,6 +773,31 @@
             adjustMapHeight();
             map.invalidateSize();
             checkGeolocationPermission();
+            
+            const nonTicketHoldersInput = document.getElementById('nonTicketHolders');
+            const fineCollectedInput = document.getElementById('fineCollected');
+            nonTicketHoldersInput.addEventListener('input', function() {
+                const nonTicketHolders = parseInt(this.value) || 0;
+                const fineAmount = nonTicketHolders * 200;
+                fineCollectedInput.value = fineAmount;
+            });
+
+            document.addEventListener('click', function(event) {
+                const attendancePortal = document.getElementById('attendancePortal');
+                const checkModal = document.getElementById('checkModal');
+
+                if (attendancePortal.classList.contains('active') && 
+                    !attendancePortal.contains(event.target) && 
+                    !event.target.closest('.navbar-button')) {
+                    hideAttendancePortal();
+                }
+
+                if (checkModal.style.display === 'block' && 
+                    !checkModal.contains(event.target) && 
+                    !event.target.closest('input[type="checkbox"]')) {
+                    closeCheckModal();
+                }
+            });
         });
 
         const stopIcon = L.divIcon({
@@ -713,13 +816,6 @@
             popupAnchor: [0, 0]
         });
 
-        const busDotIcon = L.divIcon({
-            className: 'bus-dot',
-            html: '<div style="width: 10px; height: 10px;"></div>',
-            iconSize: [10, 10],
-            iconAnchor: [5, 5]
-        });
-
         let userMarker = null;
         const busMarkers = {};
         const stopCircles = {};
@@ -728,7 +824,8 @@
         let currentFilter = 'all';
         let hasGeoPermission = false;
         const ZOOM_THRESHOLD = 14;
-        const BUS_LABEL_SIZE = [40, 20];
+        const BUS_LABEL_SIZE = [60, 18];
+        const updatingBuses = new Set();
 
         const initialBuses = <%- JSON.stringify(buses) %> || [];
         let initialBusStops = <%- JSON.stringify(busStops) %> || [];
@@ -800,8 +897,9 @@
                             <td>${bus.busNo}</td>
                             <td>${bus.routeName}</td>
                             <td>${bus.distance.toFixed(2)} km</td>
-                            <td><input type="checkbox" onchange="handleCheck('${bus.busNo}', this.checked, '${bus.routeNo}')"></td>
-                            <td><button onclick="showCheckModal('${bus.busNo}', '${bus.routeNo}')">Details</button></td>
+                            <td class="check-cell" data-bus-no="${bus.busNo}">
+                                ${updatingBuses.has(bus.busNo) ? 'Updating...' : `<input type="checkbox" ${bus.checked ? 'checked' : ''} onchange="handleCheck('${bus.busNo}', this.checked, '${bus.routeNo}')">`}
+                            </td>
                         `;
                         tableBody.appendChild(row);
                     }
@@ -837,6 +935,33 @@
             const payload = { busNo, routeNo, nonTicketHolders, fineCollected };
             console.log('Submitting check data:', payload);
 
+            closeCheckModal();
+            updatingBuses.add(busNo);
+            updateNearestDisplay(
+                findNearestLocations(
+                    userMarker ? userMarker.getLatLng().lat : 28.6139,
+                    userMarker ? userMarker.getLatLng().lng : 77.2090,
+                    allBuses,
+                    initialBusStops
+                ).nearestStop,
+                allBuses.map(bus => ({
+                    ...bus,
+                    distance: calculateDistance(
+                        userMarker ? userMarker.getLatLng().lat : 28.6139,
+                        userMarker ? userMarker.getLatLng().lng : 77.2090,
+                        bus.latitude,
+                        bus.longitude
+                    )
+                })).sort((a, b) => a.distance - b.distance).slice(0, 4),
+                initialBusStops.slice(0, 3)
+            );
+
+            const busIndex = allBuses.findIndex(b => b.busNo === busNo);
+            if (busIndex !== -1) {
+                allBuses[busIndex] = { ...allBuses[busIndex], checked: true, stopsRemaining: 10 };
+                updateBusMarkers(allBuses, initialBusStops);
+            }
+
             try {
                 const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bus-v9k2.onrender.com';
                 const response = await fetch(`${baseUrl}/api/checkBus`, {
@@ -855,16 +980,53 @@
                 console.log('Server response:', result);
 
                 if (result.success) {
-                    alert(`Bus ${busNo} checked. Non-ticket holders: ${nonTicketHolders}, Fine: Rs${fineCollected}`);
-                    closeCheckModal();
+                    updatingBuses.delete(busNo);
+                    updateNearestDisplay(
+                        findNearestLocations(
+                            userMarker ? userMarker.getLatLng().lat : 28.6139,
+                            userMarker ? userMarker.getLatLng().lng : 77.2090,
+                            allBuses,
+                            initialBusStops
+                        ).nearestStop,
+                        allBuses.map(bus => ({
+                            ...bus,
+                            distance: calculateDistance(
+                                userMarker ? userMarker.getLatLng().lat : 28.6139,
+                                userMarker ? userMarker.getLatLng().lng : 77.2090,
+                                bus.latitude,
+                                bus.longitude
+                            )
+                        })).sort((a, b) => a.distance - b.distance).slice(0, 4),
+                        initialBusStops.slice(0, 3)
+                    );
                 } else {
+                    console.error('Error updating bus check:', result.error);
                     alert('Error updating bus check: ' + result.error);
+                    updatingBuses.delete(busNo);
+                    if (busIndex !== -1) {
+                        allBuses[busIndex].checked = false;
+                        updateBusMarkers(allBuses, initialBusStops);
+                    }
                 }
             } catch (err) {
                 console.error('Fetch error:', err);
-                alert('Failed to submit bus check. Error: ' + err.message + '. Check console for details.');
+                alert('Error: ' + err.message);
+                updatingBuses.delete(busNo);
+                if (busIndex !== -1) {
+                    allBuses[busIndex].checked = false;
+                    updateBusMarkers(allBuses, initialBusStops);
+                }
             }
         };
+
+        function generateStopCounter(stopsRemaining, checked) {
+            const percentage = (stopsRemaining / 10) * 100;
+            return `
+                <div class="stop-counter">
+                    <div class="stop-bar ${checked ? 'checked' : ''}" style="width: ${percentage}%"></div>
+                </div>
+            `;
+        }
 
         function adjustMarkerOpacity(zoom) {
             const opacity = zoom > 16 ? 1 : zoom > 11 ? 0.9 : 0.4;
@@ -899,38 +1061,46 @@
             });
 
             visibleBuses.forEach(bus => {
-                const { busNo, latitude, longitude, routeNo, routeName } = bus;
+                const { busNo, latitude, longitude, routeNo, routeName, checked, stopsRemaining = 0 } = bus;
 
                 const nearbyStop = stops.find(stop => 
                     calculateDistance(latitude, longitude, stop.latitude, stop.longitude) < 0.05
                 );
 
+                const counterHtml = generateStopCounter(stopsRemaining, checked);
+                const busDotIcon = L.divIcon({
+                    className: 'bus-dot',
+                    html: `<div style="width: 10px; height: 10px; background: ${checked ? '#00ff00' : '#ff6666'}; border-radius: 50%;"></div>`,
+                    iconSize: [10, 10],
+                    iconAnchor: [5, 5]
+                });
+
                 if (busMarkers[busNo]) {
                     const marker = busMarkers[busNo];
                     const newLatLng = new L.LatLng(latitude, longitude);
                     animateMarker(marker, marker.getLatLng(), newLatLng);
-                    marker.setPopupContent(`Bus: ${busNo}<br>Route: ${routeName}<br>Lat: ${latitude}<br>Lon: ${longitude}`);
-                    if (useLabels && !marker.getElement().classList.contains('bus-label')) {
+                    if (useLabels) {
                         marker.setIcon(L.divIcon({
-                            className: 'bus-label',
-                            html: `${routeName} (${busNo})`,
+                            className: 'bus-label-container',
+                            html: `<div class="bus-label ${checked ? 'checked' : ''}">${routeName} (<span class="bus-no">${busNo}</span>)</div>${counterHtml}`,
                             iconSize: BUS_LABEL_SIZE,
                             iconAnchor: [BUS_LABEL_SIZE[0] / 2, BUS_LABEL_SIZE[1] / 2]
                         }));
-                    } else if (!useLabels && !marker.getElement().classList.contains('bus-dot')) {
+                    } else {
                         marker.setIcon(busDotIcon);
                     }
+                    marker.setPopupContent(`Bus: ${busNo}<br>Route: ${routeName}<br>Lat: ${latitude}<br>Lon: ${longitude}<br>Stops Remaining: ${stopsRemaining}`);
                 } else {
                     const icon = useLabels ? L.divIcon({
-                        className: 'bus-label',
-                        html: `${routeName} (${busNo})`,
+                        className: 'bus-label-container',
+                        html: `<div class="bus-label ${checked ? 'checked' : ''}">${routeName} (<span class="bus-no">${busNo}</span>)</div>${counterHtml}`,
                         iconSize: BUS_LABEL_SIZE,
                         iconAnchor: [BUS_LABEL_SIZE[0] / 2, BUS_LABEL_SIZE[1] / 2]
                     }) : busDotIcon;
 
                     const marker = L.marker([latitude, longitude], { icon })
                         .addTo(map)
-                        .bindPopup(`Bus: ${busNo}<br>Route: ${routeName}<br>Lat: ${latitude}<br>Lon: ${longitude}`);
+                        .bindPopup(`Bus: ${busNo}<br>Route: ${routeName}<br>Lat: ${latitude}<br>Lon: ${longitude}<br>Stops Remaining: ${stopsRemaining}`);
 
                     busMarkers[busNo] = marker;
                 }
@@ -1068,9 +1238,8 @@
                 qrScannerPopup.classList.add('active');
                 
                 setTimeout(() => {
-                    alert('QR Code detected! (Simulation)');
                     closeQRScanner();
-                }, 5000);
+                }, 4000);
             } catch (err) {
                 console.error('Camera access error:', err);
                 alert('Failed to access camera. Please allow camera permissions.');
@@ -1197,11 +1366,49 @@
         function showAttendancePortal() {
             const attendancePortal = document.getElementById('attendancePortal');
             attendancePortal.classList.add('active');
+            
+            if (userMarker && hasGeoPermission) {
+                const userLatLng = userMarker.getLatLng();
+                const nearest = findNearestLocations(userLatLng.lat, userLatLng.lng, allBuses, initialBusStops);
+                populateNearbyBuses(nearest.nearestBuses);
+            } else {
+                populateNearbyBuses([]);
+            }
         }
 
         function hideAttendancePortal() {
             const attendancePortal = document.getElementById('attendancePortal');
             attendancePortal.classList.remove('active');
+        }
+
+        function populateNearbyBuses(nearbyBuses) {
+            const select = document.getElementById('nearbyBuses');
+            select.innerHTML = '<option value="">Select a bus</option>';
+            
+            nearbyBuses.forEach(bus => {
+                const option = document.createElement('option');
+                option.value = `${bus.busNo}|${bus.routeNo}|${bus.routeName}`;
+                option.text = `Bus ${bus.busNo} - ${bus.routeName} (${bus.distance.toFixed(2)} km)`;
+                select.appendChild(option);
+            });
+
+            if (nearbyBuses.length > 0) {
+                select.value = `${nearbyBuses[0].busNo}|${nearbyBuses[0].routeNo}|${nearbyBuses[0].routeName}`;
+                updateBusDetails();
+            }
+        }
+
+        function updateBusDetails() {
+            const select = document.getElementById('nearbyBuses');
+            const [busNo, routeNo, routeName] = select.value.split('|');
+            
+            if (busNo && routeNo && routeName) {
+                document.getElementById('busNo').value = busNo;
+                document.getElementById('routeNo').value = `${routeNo} (${routeName})`;
+            } else {
+                document.getElementById('busNo').value = '';
+                document.getElementById('routeNo').value = '';
+            }
         }
 
         document.getElementById('challanForm').onsubmit = function(e) {
@@ -1215,159 +1422,140 @@
         document.getElementById('attendanceForm').onsubmit = async function(e) {
             e.preventDefault();
             const busNo = document.getElementById('busNo').value;
-            const conductorName = document.getElementById('conductorName').value;
+            const routeNo = document.getElementById('routeNo').value.split(' (')[0];
+            const conductorId = document.getElementById('conductorId').value;
+            const conductorWaiver = document.getElementById('conductorWaiver').value;
+            
             const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bus-v9k2.onrender.com';
             try {
                 const response = await fetch(`${baseUrl}/api/recordAttendance`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ busNo, conductorName })
+                    body: JSON.stringify({ 
+                        busNo, 
+                        routeNo, 
+                        conductorId, 
+                        conductorWaiver 
+                    })
                 });
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Server error: ${response.status} - ${errorText}`);
-                }
+
                 const result = await response.json();
                 if (result.success) {
-                    alert(`Attendance recorded for Bus: ${busNo}, Conductor: ${conductorName}`);
+                    alert('Attendance recorded successfully!');
                     hideAttendancePortal();
                 } else {
                     alert('Error recording attendance: ' + result.error);
                 }
             } catch (err) {
+                console.error('Error recording attendance:', err);
                 alert('Error: ' + err.message);
             }
         };
 
-        function checkGeolocationPermission() {
-            if (!navigator.geolocation) {
-                alert('Geolocation is not supported by your browser');
-                initializeWithoutGeolocation();
-                return;
-            }
-
-            navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-                if (result.state === 'granted') {
-                    hasGeoPermission = true;
-                    startGeolocationWatch();
-                } else if (result.state === 'prompt') {
-                    startGeolocationWatch();
-                } else {
-                    alert('Geolocation permission denied. Please enable location access in your browser settings.');
-                    initializeWithoutGeolocation();
-                }
-            });
-        }
-
-        function startGeolocationWatch() {
-            navigator.geolocation.watchPosition(
-                (position) => {
-                    hasGeoPermission = true;
-                    const { latitude, longitude } = position.coords;
-                    map.setView([latitude, longitude], 15);
-                    map.invalidateSize();
-
-                    if (userMarker) {
-                        userMarker.setLatLng([latitude, longitude]);
-                    } else {
-                        userMarker = L.marker([latitude, longitude], { icon: userIcon })
-                            .addTo(map)
-                            .bindPopup('You are here');
-                    }
-
-                    if (allBuses.length > 0 && initialBusStops.length > 0) {
-                        const nearest = findNearestLocations(latitude, longitude, allBuses, initialBusStops);
-                        updateNearestDisplay(nearest.nearestStop, nearest.nearestBuses, nearest.nearbyStops);
-                    }
-
-                    updateBusMarkers(allBuses, initialBusStops);
-                    updateBusStopMarkers(initialBusStops);
-                },
-                (error) => {
-                    console.error('Geolocation error:', error);
-                    if (error.code === error.PERMISSION_DENIED) {
-                        hasGeoPermission = false;
-                        alert('Geolocation permission denied. Please enable location access to use location features.');
-                        initializeWithoutGeolocation();
-                    }
-                },
-                { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
-            );
-        }
-
-        function initializeWithoutGeolocation() {
-            map.setView([28.6139, 77.2090], 12);
-            map.invalidateSize();
-            updateBusMarkers(initialBuses, initialBusStops);
-            updateBusStopMarkers(initialBusStops);
-            document.querySelector('#locationContent .data').innerHTML = `
-                <h3>Location unavailable</h3>
-                <p>Please enable geolocation to see nearest stops and buses</p>
-            `;
-            document.getElementById('nearest-stop').innerHTML = 'Nearest Stop: <b>Location unavailable</b>';
-            document.getElementById('bus-arriving').innerHTML = 'Bus Arriving: <b>Location unavailable</b>';
-        }
-
-        function goToUserLocation() {
-            if (hasGeoPermission && userMarker) {
-                const userLatLng = userMarker.getLatLng();
-                map.setView([userLatLng.lat, userLatLng.lng], 15);
-                filterContent('location');
-            } else {
+        function goToUserLocation(attempt = 1, maxAttempts = 3) {
+            if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        hasGeoPermission = true;
-                        const { latitude, longitude } = position.coords;
-                        map.setView([latitude, longitude], 15);
+                    position => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+
                         if (!userMarker) {
-                            userMarker = L.marker([latitude, longitude], { icon: userIcon })
-                                .addTo(map)
-                                .bindPopup('You are here');
+                            userMarker = L.marker([lat, lon], { icon: userIcon }).addTo(map);
                         } else {
-                            userMarker.setLatLng([latitude, longitude]);
+                            userMarker.setLatLng([lat, lon]);
                         }
-                        filterContent('location');
+                        map.setView([lat, lon], 15);
+
+                        hasGeoPermission = true;
+                        const nearest = findNearestLocations(lat, lon, allBuses, initialBusStops);
+                        updateNearestDisplay(nearest.nearestStop, nearest.nearestBuses, nearest.nearbyStops);
+                        console.log('Geolocation success:', { lat, lon });
                     },
-                    (error) => {
-                        alert('Unable to access location. Please ensure geolocation is enabled.');
+                    error => {
                         console.error('Geolocation error:', error);
+                        let errorMessage = '';
+                        switch (error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMessage = 'Location permission denied. Please enable it in your browser settings.';
+                                hasGeoPermission = false;
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage = 'Location information is unavailable. Please try again later.';
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage = 'The request to get your location timed out. Please try again.';
+                                break;
+                            default:
+                                errorMessage = `Attempt ${attempt} failed with an unknown error.`;
+                                console.error('Unknown geolocation error details:', error.message);
+                                if (attempt < maxAttempts) {
+                                    console.log(`Retrying geolocation (attempt ${attempt + 1}/${maxAttempts})...`);
+                                    setTimeout(() => goToUserLocation(attempt + 1, maxAttempts), 1000);
+                                    return;
+                                }
+                                errorMessage += ' Please check your device settings or try again later.';
+                                break;
+                        }
+                        alert(errorMessage);
                     },
-                    { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
+                    { timeout: 10000, maximumAge: 0, enableHighAccuracy: true }
                 );
+            } else {
+                alert('Geolocation is not supported by your browser.');
+            }
+        }
+
+        function checkGeolocationPermission() {
+            if (navigator.permissions) {
+                navigator.permissions.query({ name: 'geolocation' }).then(result => {
+                    if (result.state === 'granted') {
+                        hasGeoPermission = true;
+                        goToUserLocation();
+                    } else if (result.state === 'prompt') {
+                        goToUserLocation(); // Prompt user for permission
+                    } else {
+                        hasGeoPermission = false;
+                        console.log('Geolocation permission denied.');
+                    }
+                    result.onchange = () => {
+                        hasGeoPermission = result.state === 'granted';
+                        if (hasGeoPermission) goToUserLocation();
+                    };
+                }).catch(err => {
+                    console.error('Permissions API error:', err);
+                    if (navigator.geolocation) goToUserLocation();
+                });
+            } else if (navigator.geolocation) {
+                goToUserLocation();
+            } else {
+                alert('Geolocation is not supported by your browser.');
             }
         }
 
         const socket = io();
-        socket.on('busUpdate', (data) => {
-            updateBusMarkers(data.buses, data.busStops || initialBusStops);
-            updateBusStopMarkers(data.busStops || []);
-            
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            map.on('zoomend', () => socket.emit('zoomLevel', map.getZoom()));
+            socket.emit('zoomLevel', map.getZoom());
+        });
+
+        socket.on('busUpdate', data => {
+            console.log('Received bus update:', data);
+            updateBusMarkers(data.buses, initialBusStops);
+            if (data.busStops && data.busStops.length > 0) {
+                updateBusStopMarkers(data.busStops);
+            }
             if (userMarker && hasGeoPermission) {
                 const userLatLng = userMarker.getLatLng();
-                const nearest = findNearestLocations(userLatLng.lat, userLatLng.lng, data.buses, data.busStops || initialBusStops);
+                const nearest = findNearestLocations(userLatLng.lat, userLatLng.lng, data.buses, initialBusStops);
                 updateNearestDisplay(nearest.nearestStop, nearest.nearestBuses, nearest.nearbyStops);
             }
         });
 
-        map.on('zoomend', () => {
-            const zoomLevel = map.getZoom();
-            socket.emit('zoomLevel', zoomLevel);
-            updateBusMarkers(allBuses, initialBusStops);
-            updateBusStopMarkers(initialBusStops);
-        });
-
-        map.on('moveend', () => {
-            updateBusMarkers(allBuses, initialBusStops);
-            updateBusStopMarkers(initialBusStops);
-        });
-
-        window.addEventListener('resize', adjustMapHeight);
-
         updateBusMarkers(initialBuses, initialBusStops);
-        updateBusStopMarkers(initialBusStops);
-        if (document.getElementById('analysisPage').classList.contains('active')) drawHistogram();
-
-        socket.emit('zoomLevel', map.getZoom());
+        if (initialBusStops.length > 0 && map.getZoom() >= ZOOM_THRESHOLD) {
+            updateBusStopMarkers(initialBusStops);
+        }
     </script>
 </body>
 </html>

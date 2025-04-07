@@ -52,7 +52,7 @@ const url = 'https://otd.delhi.gov.in/api/realtime/VehiclePositions.pb?key=7pnJf
 
 let busData = [];
 let busStops = [];
-let routeMap = new Map(); // Map to store route_id -> route_name
+let routeMap = new Map();
 const clientZoomLevels = new Map();
 const ZOOM_THRESHOLD = 14;
 
@@ -61,9 +61,7 @@ const parseCSV = (csvString) => {
   return new Promise((resolve, reject) => {
     const data = [];
     csv.parse(csvString, { columns: true, skip_empty_lines: true })
-      .on('data', (row) => {
-        data.push(row);
-      })
+      .on('data', (row) => data.push(row))
       .on('end', () => resolve(data))
       .on('error', (err) => reject(err));
   });
@@ -88,14 +86,24 @@ const routeCsvFilePath = 'data/routename.csv';
 const routeCsvString = fs.readFileSync(routeCsvFilePath, 'utf8');
 parseCSV(routeCsvString)
   .then(routes => {
-    routes.forEach(row => {
-      routeMap.set(row.route_id, row.route_name);
-    });
+    routes.forEach(row => routeMap.set(row.route_id, row.route_name));
     console.log(`Parsed ${routeMap.size} routes from routename.csv`);
   })
   .catch(err => console.error('Error parsing routename CSV:', err));
 
-// Fetch bus data with retry logic
+// Function to calculate distance between two coordinates
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius of Earth in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// Fetch bus data with retry logic and automatic stopsRemaining updates
 const fetchBusData = async () => {
   let retries = 3;
   while (retries) {
@@ -105,7 +113,7 @@ const fetchBusData = async () => {
       const message = FeedMessage.decode(new Uint8Array(buffer));
       const data = FeedMessage.toObject(message, { longs: String, enums: String, bytes: String });
 
-      busData = data.entity
+      const newBusData = data.entity
         .filter(entity => entity.vehicle && entity.vehicle.position)
         .map(entity => ({
           busNo: entity.vehicle.vehicle.id || 'Unknown',
@@ -113,10 +121,57 @@ const fetchBusData = async () => {
           routeName: routeMap.get(entity.vehicle.trip?.routeId) || entity.vehicle.trip?.routeId || 'Unknown',
           latitude: entity.vehicle.position.latitude,
           longitude: entity.vehicle.position.longitude,
+          checked: false, // Default value
+          stopsRemaining: 0 // Default value
         }));
 
-      console.log(`Fetched ${busData.length} buses`);
+      if (db) {
+        const checkedBuses = await db.collection('busChecks').find({}).toArray();
 
+        for (const bus of newBusData) {
+          const existingBus = busData.find(b => b.busNo === bus.busNo);
+          const check = checkedBuses.find(cb => cb.busNo === bus.busNo);
+
+          // Initialize from DB if available
+          if (check) {
+            bus.checked = check.checked;
+            bus.stopsRemaining = check.stopsRemaining || 0;
+          }
+
+          // Check proximity to stops and update stopsRemaining automatically
+          const nearestStop = busStops.find(stop => 
+            calculateDistance(bus.latitude, bus.longitude, stop.latitude, stop.longitude) < 0.05
+          );
+
+          if (nearestStop && bus.checked) {
+            const lastStop = check ? check.lastStop : null;
+            if (lastStop !== nearestStop.name) {
+              // Bus has moved to a new stop, decrement stopsRemaining
+              const newStopsRemaining = Math.max(0, bus.stopsRemaining - 1);
+              await db.collection('busChecks').updateOne(
+                { busNo: bus.busNo },
+                { 
+                  $set: { 
+                    stopsRemaining: newStopsRemaining, 
+                    lastStop: nearestStop.name,
+                    checked: newStopsRemaining > 0, // Uncheck if stopsRemaining reaches 0
+                    timestamp: new Date()
+                  } 
+                },
+                { upsert: true }
+              );
+              bus.stopsRemaining = newStopsRemaining;
+              bus.checked = newStopsRemaining > 0;
+              console.log(`Bus ${bus.busNo} moved to ${nearestStop.name}, stopsRemaining: ${bus.stopsRemaining}`);
+            }
+          }
+        }
+      }
+
+      busData = newBusData;
+      console.log(`Fetched and updated ${busData.length} buses`);
+
+      // Emit updated bus data to all connected clients
       io.sockets.sockets.forEach((socket) => {
         const zoomLevel = clientZoomLevels.get(socket.id) || 0;
         const updateData = { buses: busData };
@@ -140,7 +195,17 @@ const fetchBusData = async () => {
 setInterval(fetchBusData, 1000);
 
 // Serve webpage
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
+  if (db) {
+    const checkedBuses = await db.collection('busChecks').find({}).toArray();
+    busData.forEach(bus => {
+      const check = checkedBuses.find(cb => cb.busNo === bus.busNo);
+      if (check) {
+        bus.stopsRemaining = check.stopsRemaining || 0;
+        bus.checked = check.checked;
+      }
+    });
+  }
   res.render('index', { buses: busData, busStops: [] });
 });
 
@@ -161,11 +226,30 @@ app.post('/api/checkBus', async (req, res) => {
 
   try {
     const result = await db.collection('busChecks').updateOne(
-      { busNo, timestamp: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
-      { $set: { routeNo, checked: true, nonTicketHolders, fineCollected, timestamp: new Date() } },
+      { busNo },
+      { 
+        $set: { 
+          routeNo, 
+          checked: true, 
+          nonTicketHolders, 
+          fineCollected, 
+          stopsRemaining: 10, 
+          lastStop: null, 
+          timestamp: new Date() 
+        } 
+      },
       { upsert: true }
     );
     console.log('Bus check updated:', result);
+
+    // Update busData immediately and emit to clients
+    const bus = busData.find(b => b.busNo === busNo);
+    if (bus) {
+      bus.checked = true;
+      bus.stopsRemaining = 10;
+    }
+    io.emit('busUpdate', { buses: busData, busStops: clientZoomLevels.size > 0 && Math.max(...clientZoomLevels.values()) >= ZOOM_THRESHOLD ? busStops : [] });
+
     res.json({ success: true, result });
   } catch (err) {
     console.error('Error in /api/checkBus:', err.message);
@@ -176,9 +260,9 @@ app.post('/api/checkBus', async (req, res) => {
 // API to record bus attendance
 app.post('/api/recordAttendance', async (req, res) => {
   console.log('Received /api/recordAttendance request:', req.body);
-  const { busNo, conductorName } = req.body;
+  const { busNo, routeNo, conductorId, conductorWaiver } = req.body;
 
-  if (!busNo || !conductorName) {
+  if (!busNo || !routeNo || !conductorId || !conductorWaiver) {
     console.error('Invalid request body:', req.body);
     return res.status(400).json({ success: false, error: 'Missing required fields' });
   }
@@ -191,7 +275,9 @@ app.post('/api/recordAttendance', async (req, res) => {
   try {
     const result = await db.collection('busAttendance').insertOne({
       busNo,
-      conductorName,
+      routeNo,
+      conductorId,
+      conductorWaiver,
       timestamp: new Date()
     });
     console.log('Attendance recorded:', result);
