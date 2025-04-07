@@ -24,7 +24,7 @@ Real-Time connection: Socket.IO Client
 Data:  
   
 Real-Time: GTFS Realtime (protobuf)  
-Static data: CSV (stops.csv)  
+Static data: CSV (stops.csv)  & routename.csv (for conversion of bus id to routeno)
 
 
 Currently Deployed on : Render  
