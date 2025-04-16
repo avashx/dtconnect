@@ -830,7 +830,7 @@
             <div class="navbar-toggle" onclick="toggleNavbar('toggle')">
                 <div class="navbar-icons">
                     <svg xmlns="http://www.w3.org/2000/svg" class="navbar-icon lucide lucide-chevron-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="navbar-icon lucide lucide-map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" onclick="goToUserLocation(); filterContent('location')"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="navbar-icon lucide lucide-map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" onclick="requestUserLocation(); filterContent('location')"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"></path><circle cx="12" cy="10" r="3"></circle></svg>
                     <svg xmlns="http://www.w3.org/2000/svg" class="navbar-icon lucide lucide-bus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" onclick="toggleNavbar('buses'); filterContent('buses')"><path d="M8 6v6"></path><path d="M15 6v6"></path><path d="M2 12h19.6"></path><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"></path><circle cx="7" cy="18" r="2"></circle><path d="M9 18h5"></path><circle cx="16" cy="18" r="2"></circle></svg>
                 </div>
             </div>
@@ -972,7 +972,7 @@
             updateCirclesPosition();
             initializeCircles();
             map.invalidateSize();
-            checkGeolocationPermission();
+            initializeLocation();
             fetchAllStops();
         });
 
@@ -1409,9 +1409,20 @@
             qrScanner.classList.remove('active');
         }
 
-        function goToUserLocation(attempt = 1, maxAttempts = 3) {
+        function initializeLocation() {
+            if (navigator.geolocation) {
+                checkGeolocationPermission();
+            } else {
+                // Fallback to default location
+                console.warn('Geolocation not supported, using default location');
+                setDefaultLocation();
+            }
+        }
+
+        function requestUserLocation(attempt = 1, maxAttempts = 3) {
             if (!navigator.geolocation) {
                 console.error('Geolocation is not supported by your browser.');
+                setDefaultLocation();
                 return;
             }
 
@@ -1439,27 +1450,32 @@
                                 console.log('Location permission denied. Attempt:', attempt);
                                 hasGeoPermission = false;
                                 if (attempt === maxAttempts) {
-                                    console.log('Location permission denied. Please enable it in your browser settings.');
+                                    console.log('Location permission denied, using default location.');
+                                    setDefaultLocation();
                                 }
                                 break;
                             case error.POSITION_UNAVAILABLE:
                                 console.log('Location information is unavailable. Attempt:', attempt);
                                 if (attempt === maxAttempts) {
-                                    console.log('Location information is unavailable. Please try again later.');
+                                    console.log('Location information is unavailable, using default location.');
+                                    setDefaultLocation();
                                 }
                                 break;
                             case error.TIMEOUT:
                                 console.log('Location request timed out. Retrying... Attempt:', attempt);
                                 if (attempt < maxAttempts) {
-                                    setTimeout(() => goToUserLocation(attempt + 1, maxAttempts), 2000);
+                                    setTimeout(() => requestUserLocation(attempt + 1, maxAttempts), 2000);
+                                } else {
+                                    setDefaultLocation();
                                 }
                                 break;
                             default:
                                 console.log('Unknown geolocation error. Attempt:', attempt);
                                 if (attempt < maxAttempts) {
-                                    setTimeout(() => goToUserLocation(attempt + 1, maxAttempts), 2000);
+                                    setTimeout(() => requestUserLocation(attempt + 1, maxAttempts), 2000);
                                 } else {
-                                    console.log('Failed to get your location after multiple attempts. Please check your device settings or try again later.');
+                                    console.log('Failed to get your location, using default location.');
+                                    setDefaultLocation();
                                 }
                                 break;
                         }
@@ -1469,29 +1485,43 @@
             );
         }
 
+        function setDefaultLocation() {
+            const defaultLat = 28.62053784632279;
+            const defaultLon = 77.24801224417742;
+            if (!userMarker) {
+                userMarker = L.marker([defaultLat, defaultLon], { icon: userIcon }).addTo(map);
+            } else {
+                userMarker.setLatLng([defaultLat, defaultLon]);
+            }
+            map.setView([defaultLat, defaultLon], 15);
+            hasGeoPermission = false;
+            const nearest = findNearestLocations(defaultLat, defaultLon, allBuses, initialBusStops);
+            updateNearestDisplay(nearest.nearestStop, nearest.nearestBuses, nearest.nearbyStops);
+        }
+
         function checkGeolocationPermission() {
             if (navigator.permissions) {
                 navigator.permissions.query({ name: 'geolocation' }).then(result => {
                     if (result.state === 'granted') {
                         hasGeoPermission = true;
-                        goToUserLocation();
+                        requestUserLocation();
                     } else if (result.state === 'prompt') {
-                        goToUserLocation();
+                        requestUserLocation();
                     } else {
                         hasGeoPermission = false;
-                        console.log('Geolocation permission denied.');
-                        goToUserLocation();
+                        setDefaultLocation();
                     }
                     result.onchange = () => {
                         hasGeoPermission = result.state === 'granted';
-                        if (hasGeoPermission) goToUserLocation();
+                        if (hasGeoPermission) requestUserLocation();
+                        else setDefaultLocation();
                     };
                 }).catch(err => {
                     console.error('Permissions API error:', err);
-                    goToUserLocation();
+                    requestUserLocation();
                 });
             } else {
-                goToUserLocation();
+                requestUserLocation();
             }
         }
 
@@ -1499,7 +1529,9 @@
             updateCirclesPosition();
             map.invalidateSize();
             if (hasGeoPermission) {
-                goToUserLocation();
+                requestUserLocation();
+            } else {
+                setDefaultLocation();
             }
         }
 
@@ -1668,7 +1700,7 @@
             if (data.busStops && data.busStops.length > 0) {
                 updateBusStopMarkers(data.busStops);
             }
-            if (userMarker && hasGeoPermission) {
+            if (userMarker && (hasGeoPermission || !navigator.geolocation)) {
                 const userLatLng = userMarker.getLatLng();
                 const nearest = findNearestLocations(userLatLng.lat, userLatLng.lng, data.buses, initialBusStops);
                 updateNearestDisplay(nearest.nearestStop, nearest.nearestBuses, nearest.nearbyStops);
