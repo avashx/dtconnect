@@ -17,7 +17,7 @@ const io = new Server(server);
 const corsOptions = {
     origin: function (origin, callback) {
         const allowedOrigins = [
-            'https://bus-19wu.onrender.com', // Frontend URL
+            'https://bus-19wu.onrender.com','https://dtconnect-app.onrender.com', // Frontend URL
             'http://localhost:3000'          // For local testing
         ];
         if (!origin || allowedOrigins.includes(origin)) {
