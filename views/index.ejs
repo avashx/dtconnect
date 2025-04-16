@@ -3,119 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time Bus Tracker</title>
+    <title>DTConnect</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* [Your existing CSS remains unchanged] */
-        #map {
-            height: 100%;
-            width: 100%;
-            position: relative;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
 
-        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
-            background-color: #efdfdf;
-            color: white;
-            margin: 0;
-            font-family: 'Karla', sans-serif;
+            background-color: transparent;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
             overflow-x: hidden;
             height: 100vh;
-            padding: 0;
-            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
-        .back {
-            background: #efdfdf;
-            background-size: 400% 400%;
-            animation: gradient 15s ease infinite;
-            overflow: hidden;
-            height: calc(100vh - 90px);
+        #map {
+            width: 100%;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
         }
 
-        @keyframes gradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        a {
-            text-decoration: none;
-            color: white;
-        }
-
-        h2 {
-            font-weight: 100;
-        }
-
-        .sectop {
-            margin-top: 6px;
-            min-height: 300px;
-            margin: 0;
-            color: white;
-            overflow: hidden;
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
             position: relative;
+            z-index: 2;
+        }
+
+        .page {
+            display: none;
+            flex-direction: column;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
             height: 100%;
+            z-index: 3;
+        }
+
+        .page.active {
+            display: flex;
         }
 
         .leaflet-control-attribution {
             display: none;
-        }
-
-        .box {
-            margin: auto;
-            padding-top: 10px;
-            padding-bottom: 20px;
-            margin-top: -45px;
-            margin-bottom: 15px;
-            background-color: white;
-            box-shadow: 5px 7px 12px black;
-            border-radius: 14px;
-            max-width: 90%;
-            min-height: 100px;
-            text-align: center;
-            color: black;
-            overflow: hidden;
-        }
-
-        .search {
-            width: 400px;
-            height: 40px;
-            padding: 0 1rem;
-            background: #e8e8e8;
-            border-radius: 2%;
-            transition: transform 0.1s ease-in-out;
-        }
-
-        .btn, .btn1 {
-            margin: 2%;
-            font-size: 15px;
-            height: 40px;
-            padding: 0px 40px;
-            border: none;
-            border-radius: 5px;
-            background: #000000;
-            color: white;
-        }
-
-        .btn:hover, .btn1:hover {
-            background: #f5f5f5;
-            color: #157efb;
-        }
-
-        .map-container {
-            width: 100%;
-            height: 100%;
-            border-radius: 8px;
-            box-shadow: 5px 7px 12px black;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            position: absolute;
-            top: 0;
-            left: 0;
         }
 
         .bus-label-container {
@@ -126,23 +68,19 @@
         }
 
         .bus-label {
-            background: #ff6666;
-            border: 1px solid #570047;
-            padding: 1px 3px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #fff;
+            padding: 2px 4px;
             font-size: 8px;
             font-weight: bold;
             text-align: center;
-            border-radius: 2px;
-            color: #000000;
+            border-radius: 4px;
+            color: #fff;
             opacity: 1;
             transition: opacity 0.3s ease;
             width: 60px;
             display: inline-block;
             line-height: 10px;
-        }
-
-        .bus-label.checked {
-            background: #00ff00;
         }
 
         .bus-label .bus-no {
@@ -153,12 +91,13 @@
             border-radius: 50%;
             pointer-events: none;
             box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+            transition: transform 1s ease;
         }
 
         .stop-counter {
             width: 60px;
             height: 8px;
-            background: #ccc;
+            background: #444;
             border-radius: 4px;
             margin-top: 2px;
             pointer-events: none;
@@ -169,640 +108,877 @@
 
         .stop-bar {
             height: 100%;
-            background: #ff6666;
+            background: #fff;
             transition: width 0.3s ease;
             border-radius: 3px 0 0 3px;
-            position: relative;
         }
 
-        .stop-bar.checked {
-            background: #00ff00;
-        }
-
-        .stop-counter::after {
-            content: '';
+        .floating-circles {
             position: absolute;
-            right: -3px;
-            top: 2px;
-            width: 2px;
-            height: 4px;
-            background: #666;
-            border-radius: 0 2px 2px 0;
-        }
-
-        .data {
-            margin: 2% 2%;
-            font-family: "VT323", monospace;
-            font-weight: 400;
-            font-style: normal;
-            font-size: 11px;
-            padding: 10px 10px;
-            border: none;
-            border-radius: 12px;
-            text-align: left;
-            background: #dde5e0;
-            color: rgb(0, 0, 0);
-        }
-
-        .data:hover {
-            background: #f5f5f5;
-            color: #157efb;
-        }
-
-        .map-overlay {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            z-index: 1000;
+            width: 100%;
             display: flex;
+            justify-content: center;
             gap: 10px;
-            justify-content: space-between;
+            z-index: 5;
+            transition: bottom 0.5s ease;
+            bottom: 90px; /* Slightly above navbar when collapsed (70px + 20px gap) */
         }
 
-        .map-overlay div {
-            background-color: rgb(0, 0, 0);
-            border-radius: 14px;
-            padding: 5px 10px;
-            font-size: 11px;
-            font-weight: 600;
-            color: white;
-            border: white 2px solid;
+        .floating-circles.navbar-expanded {
+            bottom: 510px; /* Above expanded navbar (500px + 10px gap) */
+        }
+
+        .bubble-circle {
+            background: #fff;
+            border-radius: 50%;
             display: flex;
+            flex-direction: column;
+            justify-content: center;
             align-items: center;
-            gap: 5px;
+            text-align: center;
+            color: #000;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+            padding: 8px;
+            width: 100px;
+            height: 100px;
+            min-width: 100px;
+            min-height: 100px;
+            aspect-ratio: 1;
+            overflow: hidden;
+            animation: floating 10s infinite ease-in-out;
         }
 
-        .map-overlay b {
-            font-size: 8px;
-            color: #eeff2d;
-            font-weight: 400;
+        .bubble-circle.center {
+            width: 110px;
+            height: 110px;
+            min-width: 110px;
+            min-height: 110px;
         }
 
-        .map-overlay div svg {
-            width: 20px;
-            height: 20px;
+        .bubble-circle.side {
+            width: 80px;
+            height: 80px;
+            min-width: 80px;
+            min-height: 80px;
+        }
+
+        .bubble-circle.clicked {
+            transform: scale(1.1);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .bubble-circle.clicked.popped {
+            transform: scale(1);
+        }
+
+        .bubble-circle.at-stop {
+            background-color: #d8ffbe;
+        }
+
+        .bubble-circle .route-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 2px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+            width: 90%;
+        }
+
+        .bubble-circle.side .route-name {
+            font-size: 0.7rem;
+        }
+
+        .bubble-circle .bus-no {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 2px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+            width: 90%;
+        }
+
+        .bubble-circle.side .bus-no {
+            font-size: 0.8rem;
+        }
+
+        .bubble-circle .distance {
+            font-size: 0.7rem;
+            color: #555;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+            width: 90%;
+        }
+
+        .bubble-circle.side .distance {
+            font-size: 0.6rem;
+        }
+
+        @media (max-width: 768px) {
+            .bubble-circle {
+                width: 80px;
+                height: 80px;
+                min-width: 80px;
+                min-height: 80px;
+                padding: 6px;
+            }
+            .bubble-circle.center {
+                width: 90px;
+                height: 90px;
+                min-width: 90px;
+                min-height: 90px;
+            }
+            .bubble-circle.side {
+                width: 70px;
+                height: 70px;
+                min-width: 70px;
+                min-height: 70px;
+            }
+            .bubble-circle .route-name {
+                font-size: 0.7rem;
+            }
+            .bubble-circle.side .route-name {
+                font-size: 0.6rem;
+            }
+            .bubble-circle .bus-no {
+                font-size: 0.9rem;
+            }
+            .bubble-circle.side .bus-no {
+                font-size: 0.7rem;
+            }
+            .bubble-circle .distance {
+                font-size: 0.6rem;
+            }
+            .bubble-circle.side .distance {
+                font-size: 0.5rem;
+            }
+            .floating-circles {
+                gap: 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .bubble-circle {
+                width: 80px;
+                height: 80px;
+                min-width: 80px;
+                min-height: 80px;
+                padding: 4px;
+            }
+            .bubble-circle.center {
+                width: 110px;
+                height: 110px;
+                min-width: 110px;
+                min-height: 110px;
+            }
+            .bubble-circle.side {
+                width: 80px;
+                height: 80px;
+                min-width: 80px;
+                min-height: 80px;
+            }
+            .bubble-circle .route-name {
+                font-size: 0.6rem;
+            }
+            .bubble-circle.side .route-name {
+                font-size: 0.5rem;
+            }
+            .bubble-circle .bus-no {
+                font-size: 0.8rem;
+            }
+            .bubble-circle.side .bus-no {
+                font-size: 0.6rem;
+            }
+            .bubble-circle .distance {
+                font-size: 0.5rem;
+            }
+            .bubble-circle.side .distance {
+                font-size: 0.4rem;
+            }
+            .floating-circles {
+                gap: 6px;
+            }
+        }
+
+        @keyframes floating {
+            from { transform: translate(0, 0px); }
+            65%  { transform: translate(0, 5px); }
+            to   { transform: translate(0, 0px); }
         }
 
         .bottom-navbar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: #000;
-            color: white;
-            border-top-left-radius: 15px;
-            border-top-right-radius: 15px;
-            transition: height 0.3s ease;
-            z-index: 1000;
-            overflow: hidden;
+            background: #111;
+            padding: 10px;
+            border-radius: 12px;
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
+            z-index: 3;
+            width: 98%;
+            margin: 0 auto;
+            transition: height 0.5s ease;
+            position: absolute;
+            bottom: 0;
+            left: 1%;
         }
 
         .bottom-navbar.collapsed {
-            height: 90px;
+            height: 70px;
         }
 
         .bottom-navbar.expanded {
-            height: 450px;
-            max-height: 450px;
+            height: 500px;
+            max-height: 500px;
             overflow-y: auto;
         }
 
         .navbar-toggle {
-            width: 100%;
-            height: 75px;
-            background: #000;
+            background: #111;
+            padding: 10px;
+            border-radius: 12px;
+            cursor: pointer;
             display: flex;
             justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            border-top-left-radius: 15px;
-            border-top-right-radius: 15px;
-        }
-
-        .navbar-toggle svg {
-            width: 28px;
-            height: 28px;
         }
 
         .navbar-icons {
             display: flex;
-            gap: 50px;
-            justify-content: center;
-            width: 100%;
+            gap: 15px;
         }
 
         .navbar-icon {
             width: 24px;
             height: 24px;
+            color: #fff;
             cursor: pointer;
-            transition: color 0.3s;
+            transition: color 0.3s ease;
         }
 
         .navbar-icon:hover {
-            color: #00d363;
+            color: #ccc;
+        }
+
+        .bus-table {
+            width: 100%;
+            background: #222;
+            color: #fff;
+            border-collapse: collapse;
+        }
+
+        .bus-table th,
+        .bus-table td {
+            padding: 10px;
+            border-bottom: 1px solid #333;
+            text-align: left;
+        }
+
+        .bus-table th {
+            background: #333;
         }
 
         .navbar-content {
             padding: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
         }
 
-        .bus-table {
-            margin-top: 8px;
-            width: 100%;
-            border-collapse: collapse;
-            color: white;
-            background: #333;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-
-        .bus-table th, .bus-table td {
-            padding: 8px;
-            text-align: left;
-            border-bottom: 1px solid #555;
-            font-size: 10px;
-        }
-
-        .bus-table th {
-            background: #444;
-        }
-
-        .bus-table td input[type="checkbox"] {
-            margin-right: 10px;
-            width: 20px;
-            height: 20px;
-            appearance: none;
-            border: 2px solid #fff;
-            border-radius: 4px;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .bus-table td input[type="checkbox"]:checked {
-            background-color: #00ff00;
-            border-color: #00ff00;
-        }
-
-        .bus-table td input[type="checkbox"]:checked::after {
-            content: '✔';
-            position: absolute;
-            color: #000;
-            font-size: 14px;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        .navbar-button {
-            background: #2d2d2d;
-            border: none;
-            padding: 15px;
-            border-radius: 10px;
-            color: white;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 10px 0;
+        .ride-detail {
             display: flex;
             align-items: center;
-            gap: 10px;
-            justify-content: center;
-            height: 100px;
+            justify-content: space-between;
+            padding: 10px 0;
+            color: #fff;
         }
 
-        .navbar-button:hover {
-            background: #444;
+        .ride-detail .time {
+            font-size: 1.2rem;
+            font-weight: 600;
         }
 
-        .navbar-button svg {
-            width: 20px;
+        .ride-detail .arrival-time {
+            font-size: 0.9rem;
+            color: #ccc;
+            margin-left: 5px;
+        }
+
+        .ride-detail .address {
+            font-size: 0.9rem;
+            color: #ccc;
+            flex-grow: 1;
+            margin: 0 10px;
+        }
+
+        .ride-detail .change-btn {
+            background: transparent;
+            border: 1px solid #fff;
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: border-color 0.3s ease, color 0.3s ease;
+        }
+
+        .ride-detail .change-btn:hover {
+            border-color: #ccc;
+            color: #ccc;
+        }
+
+        .ride-dot {
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            border-radius: 50%;
+            margin: 0 5px;
+        }
+
+        .ride-dot::after {
+            content: '';
+            width: 2px;
             height: 20px;
+            background: #666;
+            position: absolute;
+            left: 4px;
+            top: 10px;
         }
 
-        .navbar-buttons {
+        .ticket-form {
+            display: none;
+            padding: 10px;
+        }
+
+        .ticket-form.active {
+            display: block;
+        }
+
+        .ticket-form label {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .ticket-form input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background: #222;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1rem;
+        }
+
+        .ticket-form input:focus {
+            outline: none;
+            border-color: #fff;
+        }
+
+        .input-row {
             display: flex;
             gap: 10px;
-            justify-content: space-between;
         }
 
-        .navbar-search {
-            width: 100%;
-            height: 40px;
-            padding: 0 1rem;
-            background: #e8e8e8;
-            border-radius: 10px;
+        .input-row input {
+            flex: 1;
+        }
+
+        .ticket-form .btn {
+            display: block;
+            margin: 20px auto;
+            width: 200px;
+            padding: 12px 24px;
+            background: linear-gradient(90deg, #4CAF50, #2E7D32);
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 600;
             border: none;
-            color: black;
-            font-size: 14px;
-            margin: 5px 0;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            text-decoration: none;
+            text-align: center;
         }
 
-        .navbar-search:focus {
-            outline: none;
-            background-color: #fff;
+        .ticket-form .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
         }
 
-        .analytics-button, .qr-button {
+        .stop-dropdown {
+            position: absolute;
+            background: #222;
+            border: 1px solid #333;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 100%;
+            z-index: 5;
+            display: none;
+        }
+
+        .stop-dropdown.active {
+            display: block;
+        }
+
+        .stop-item {
+            padding: 10px;
+            cursor: pointer;
+            color: #fff;
+        }
+
+        .stop-item:hover {
+            background: #333;
+        }
+
+        .bus-arrival {
+            font-size: 1rem;
+            color: #ccc;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .hamburger-btn {
             position: fixed;
+            top: 20px;
             right: 20px;
-            width: 50px;
-            height: 50px;
-            background: #000000;
+            width: 40px;
+            height: 40px;
+            background: #111;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-            z-index: 1001;
-            border: #dde5e0 2px solid;
-            transition: bottom 0.3s ease;
+            z-index: 100;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
         }
 
-        .bottom-navbar.collapsed ~ .analytics-button {
-            bottom: 80px;
-        }
-
-        .bottom-navbar.collapsed ~ .qr-button {
-            bottom: 140px;
-        }
-
-        .bottom-navbar.expanded ~ .analytics-button, .bottom-navbar.expanded ~ .qr-button {
-            bottom: calc(450px + 20px);
-        }
-
-        .analytics-button svg, .qr-button svg {
-            width: 24px;
-            height: 24px;
-            color: white;
-        }
-
-        .analysis-page, .challan-portal, .attendance-portal {
-            display: none;
+        .side-navbar {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 400px;
-            max-height: 80vh;
-            background: #1a1a1a;
-            color: white;
-            z-index: 1002;
+            top: 0;
+            right: -300px;
+            width: 300px;
+            height: 100%;
+            background: #111;
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            overflow-y: auto;
+            z-index: 99;
+            transition: right 0.3s ease;
         }
 
-        .analysis-page.active, .challan-portal.active, .attendance-portal.active {
-            display: block;
+        .side-navbar.active {
+            right: 0;
         }
 
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 24px;
+        .side-navbar h3 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .side-navbar ul {
+            list-style: none;
+        }
+
+        .side-navbar li {
+            padding: 15px 0;
+            font-size: 1.1rem;
             cursor: pointer;
         }
 
-        #histogramCanvas, #navbarHistogram {
-            max-width: 100%;
-            height: 300px;
+        .side-navbar li:hover {
+            color: #ccc;
         }
 
-        .analysis-page form, .challan-portal form, .attendance-portal form {
+        .qr-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 40px;
+            height: 40px;
+            background: #111;
+            border-radius: 50%;
             display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 20px;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
         }
 
-        .analysis-page input, .challan-portal input, .attendance-portal input, .attendance-portal select {
-            padding: 8px;
-            border-radius: 5px;
-            border: 1px solid #555;
-            background: #333;
-            color: white;
-        }
-
-        .attendance-portal select {
-            background: #2d2d2d;
-            border: 2px solid #555;
-            appearance: none;
-            padding: 10px;
-        }
-
-        #attendanceForm select {
-            padding: 10px;
-            line-height: inherit;
-            color: #000000;
-        }
-
-        .analysis-page input:focus, .challan-portal input:focus, .attendance-portal input:focus, .attendance-portal select:focus {
-            outline: none;
-            border-color: #00d363;
-        }
-
-        .qr-scanner-popup {
+        .qr-scanner {
             display: none;
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 300px;
-            height: 300px;
+            width: 90%;
+            max-width: 400px;
+            height: 500px;
             background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            z-index: 10000;
+            border-radius: 12px;
+            z-index: 10001;
             overflow: hidden;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         }
 
-        .qr-scanner-popup.active {
-            display: block;
+        .qr-scanner.active {
+            display: flex;
         }
 
-        #qr-video {
+        .qr-scanner .scanner-box {
+            width: 100%;
+            height: 60%;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .qr-scanner video {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            border-radius: 8px;
         }
 
-        .qr-scan-line {
+        .qr-scanner .scan-line {
             position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
             height: 2px;
-            background: #00ff00;
+            background: #0f0;
+            top: 0;
             animation: scan 2s infinite linear;
+        }
+
+        .qr-scanner .manual-entry {
+            width: 100%;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .qr-scanner .manual-entry h3 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: #000;
+        }
+
+        .qr-scanner .bus-number-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .qr-scanner .bus-number-btn {
+            background: #e0e0e0;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            color: #333;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .qr-scanner .bus-number-btn:hover {
+            background: #d0d0d0;
+        }
+
+        .qr-scanner .number-inputs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .qr-scanner .number-input {
+            width: 40px;
+            height: 40px;
+            background: #e0e0e0;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            text-align: center;
+            color: #333;
+        }
+
+        .qr-scanner .number-input:focus {
+            outline: none;
+            border: 2px solid #4CAF50;
         }
 
         @keyframes scan {
             0% { top: 0; }
-            50% { top: calc(100% - 2px); }
+            50% { top: 100%; }
             100% { top: 0; }
         }
 
-        .bus-stop-icon svg {
-            opacity: 1;
-        }
-
-        .user-location-icon svg {
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
-
-        #checkModal {
-            display: none;
+        .nearest-bus-overlay {
             position: fixed;
-            top: 50%;
+            top: 20px;
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translateX(-50%);
+            width: 200px;
+            height: 40px;
             background: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            z-index: 10001;
-            color: black;
-            min-width: 80%;
-        }
-
-        #checkModal input[type="number"] {
-            background: #f0f0f0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            padding: 8px;
-            width: 100%;
-            margin-bottom: 10px;
-        }
-
-        #checkModal form {
+            border-radius: 20px;
             display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        #checkModal .button-container {
-            display: flex;
-            gap: 10px;
+            align-items: center;
             justify-content: center;
+            z-index: 100;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            color: #000;
+            padding: 0 15px;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: transform 0.5s ease, width 0.5s ease, height 0.5s ease, left 0.5s ease;
+            cursor: pointer;
+        }
+
+        .nearest-bus-overlay.hamburger-active {
+            left: 70px;
+            transform: translateX(0);
+            width: 40px;
+            height: 40px;
+            background: #fff;
+            border-radius: 50%;
+            padding: 0;
+        }
+
+        .nearest-bus-overlay.hamburger-active .nearest-bus-stop-text {
+            display: none;
+        }
+
+        .nearest-bus-overlay.hamburger-active .location-pin {
+            display: block;
+        }
+
+        .nearest-bus-overlay .nearest-bus-stop-text {
+            display: block;
+        }
+
+        .nearest-bus-overlay .location-pin {
+            display: none;
+            width: 24px;
+            height: 24px;
+        }
+
+        .nearest-bus-overlay.hamburger-active .location-pin svg {
+            stroke: #000;
+        }
+
+        .nearest-bus-overlay:hover {
+            transform: translateX(-50%) scale(1.05);
+        }
+
+        .nearest-bus-dropdown {
+            display: none;
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            background: #222;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            z-index: 101;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .nearest-bus-dropdown.active {
+            display: block;
+        }
+
+        .nearest-bus-option {
+            padding: 8px;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .nearest-bus-option:hover {
+            background: #333;
+        }
+
+        .ticket-form .btn.upi-pay1 {
+            text-decoration: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
     </style>
 </head>
 
 <body>
-    <section class="back">
-        <div class="sectop">
-            <center>
-                <div class="map-container">
-                    <div id="map"></div>
-                    <div class="map-overlay">
-                        <div>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" color="red" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin text-red-500"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                            <span id="nearest-stop">Nearest Stop: Loading...</span>
-                        </div>
-                        <div>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" color="blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bus text-blue-500"><path d="M8 6v6"></path><path d="M15 6v6"></path><path d="M2 12h19.6"></path><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"></path><circle cx="7" cy="18" r="2"></circle><path d="M9 18h5"></path><circle cx="16" cy="18" r="2"></circle></svg>
-                            <span id="bus-arriving">Bus Arriving: Loading...</span>
-                        </div>
+    <div class="container">
+        <div id="map"></div>
+        <!-- Floating Circles -->
+        <div class="floating-circles" id="floatingCircles">
+            <div class="bubble-circle side" data-bus-no=""></div>
+            <div class="bubble-circle center" data-bus-no=""></div>
+            <div class="bubble-circle side" data-bus-no=""></div>
+        </div>
+
+        <!-- Bottom Navbar -->
+        <div class="bottom-navbar collapsed" id="bottomNavbar">
+            <div class="navbar-toggle" onclick="toggleNavbar('toggle')">
+                <div class="navbar-icons">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="navbar-icon lucide lucide-chevron-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="navbar-icon lucide lucide-map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" onclick="goToUserLocation(); filterContent('location')"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="navbar-icon lucide lucide-bus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" onclick="toggleNavbar('buses'); filterContent('buses')"><path d="M8 6v6"></path><path d="M15 6v6"></path><path d="M2 12h19.6"></path><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"></path><circle cx="7" cy="18" r="2"></circle><path d="M9 18h5"></path><circle cx="16" cy="18" r="2"></circle></svg>
+                </div>
+            </div>
+            <div class="navbar-content" id="navbarContent">
+                <h3 style="font-size: 1.5rem; margin-bottom: 10px;">Next bus</h3>
+                <div id="rideDetails" class="ride-detail">
+                    <div class="ride-dot"></div>
+                    <span class="time" id="nextBusTime">Loading...</span>
+                    <span class="arrival-time" id="arrivalTime">Loading...</span>
+                    <span class="address" id="nearestStopName">Loading...</span>
+                    <button class="change-btn" id="routeNameBtn">Loading...</button>
+                </div>
+                <div id="busesContent" class="content-section" style="display: none;">
+                    <div class="bus-arrival" id="busArrival">Calculating next bus arrival...</div>
+                    <table class="bus-table" id="nearestBusesTable">
+                        <thead>
+                            <tr>
+                                <th>Bus No</th>
+                                <th>Route Name</th>
+                                <th>Distance</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div id="locationContent" class="content-section" style="display: none;">
+                    <div class="data">
+                        <h3>Nearest Stop: Loading...</h3>
+                        <h3>Nearest Buses: Loading...</h3>
                     </div>
                 </div>
-            </center>
-        </div>
-    </section>
-
-    <div class="bottom-navbar collapsed" id="bottomNavbar">
-        <div class="navbar-toggle" onclick="toggleNavbar()">
-            <div class="navbar-icons">
-                <svg xmlns="http://www.w3.org/2000/svg" class="navbar-icon lucide lucide-chevron-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" class="navbar-icon lucide lucide-map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" onclick="goToUserLocation(); filterContent('location')"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" class="navbar-icon lucide lucide-bar-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" onclick="toggleNavbar(); filterContent('analytics')"><path d="M3 3v18h18"></path><path d="M13 17h7"></path><path d="M13 12h7"></path><path d="M13 7h7"></path><path d="M3 12h8"></path><path d="M3 7h5"></path></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" class="navbar-icon lucide lucide-bus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" onclick="toggleNavbar(); filterContent('scan')"><path d="M8 6v6"></path><path d="M15 6v6"></path><path d="M2 12h19.6"></path><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"></path><circle cx="7" cy="18" r="2"></circle><path d="M9 18h5"></path><circle cx="16" cy="18" r="2"></circle></svg>
-            </div>
-        </div>
-        <div class="navbar-content" id="navbarContent">
-            <div id="busesContent" class="content-section" style="display: none;">
-                <table class="bus-table" id="nearestBusesTable">
-                    <thead>
-                        <tr>
-                            <th>Bus No</th>
-                            <th>Route Name</th>
-                            <th>Distance</th>
-                            <th>Checked</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-                <div class="navbar-buttons">
-                    <button class="navbar-button" onclick="showAttendancePortal()">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00aaff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-check"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><polyline points="16 11 18 13 22 9"></polyline></svg>
-                        Attendance
-                    </button>
-                    <button class="navbar-button" onclick="showChallanPortal()">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00ff00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="10" y1="9" x2="8" y2="9"></line></svg>
-                        Bus Challan
-                    </button>
-                </div>
-            </div>
-
-            <div id="locationContent" class="content-section" style="display: none;">
-                <input type="text" class="navbar-search" placeholder="Search locations..." />
-                <div class="data">
-                    <h3>Nearest Stop: Loading...</h3>
-                    <h3>Nearest Buses: Loading...</h3>
-                </div>
-            </div>
-
-            <div id="analyticsContent" class="content-section" style="display: none;">
-                <canvas id="navbarHistogram" style="max-height: 200px;"></canvas>
-                <div class="data">
-                    <h3>Total Checks: 150</h3>
-                    <h3>Collection: Rs5,000</h3>
-                </div>
-            </div>
-
-            <div id="scanContent" class="content-section" style="display: none;">
-                <button class="navbar-button" onclick="openQRScanner()">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-qr-code"><rect width="5" height="5" x="3" y="3" rx="1"></rect><rect width="5" height="5" x="16" y="3" rx="1"></rect><rect width="5" height="5" x="3" y="16" rx="1"></rect><path d="M21 16h-3a2 2 0 0 0-2 2v3"></path><path d="M21 21v.01"></path><path d="M12 7v3a2 2 0 0 1-2 2H7"></path><path d="M3 12h.01"></path><path d="M12 3h.01"></path><path d="M12 16v.01"></path><path d="M16 12h1"></path><path d="M21 12v.01"></path><path d="M12 21v-1"></path></svg>
-                    Scan QR Code
-                </button>
-                <div class="data">
-                    <h3>Last Scan: None</h3>
+                <div id="ticketContent" class="content-section ticket-form" style="display: none;">
+                    <label for="ticketSourceStop">Picking you up from</label>
+                    <div style="position: relative;">
+                        <input type="text" id="ticketSourceStop" placeholder="Source stop" />
+                        <div class="stop-dropdown" id="sourceStopDropdown"></div>
+                    </div>
+                    <label for="ticketDropStop">Destination</label>
+                    <div style="position: relative;">
+                        <input type="text" id="ticketDropStop" placeholder="Enter destination stop" />
+                        <div class="stop-dropdown" id="dropStopDropdown"></div>
+                    </div>
+                    <div class="input-row">
+                        <div>
+                            <label for="ticketBusNo">Bus Number</label>
+                            <input type="text" id="ticketBusNo" placeholder="Bus Number" readonly />
+                        </div>
+                        <div>
+                            <label for="ticketRouteName">Route Name</label>
+                            <input type="text" id="ticketRouteName" placeholder="Route Name" />
+                        </div>
+                    </div>
+                    <a href="upi://pay?pa=avs.vash@okaxis&pn=DTC&cu=INR&am=13.85" class="btn upi-pay1">Pay with UPI</a>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="analytics-button" onclick="showAnalysisPage()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bar-chart"><path d="M3 3v18h18"></path><path d="M13 17h7"></path><path d="M13 12h7"></path><path d="M13 7h7"></path><path d="M3 12h8"></path><path d="M3 7h5"></path></svg>
-    </div>
+        <!-- Hamburger Button -->
+        <div class="hamburger-btn" onclick="toggleSideNavbar()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </div>
 
-    <div class="qr-button" onclick="openQRScanner()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-qr-code"><rect width="5" height="5" x="3" y="3" rx="1"></rect><rect width="5" height="5" x="16" y="3" rx="1"></rect><rect width="5" height="5" x="3" y="16" rx="1"></rect><path d="M21 16h-3a2 2 0 0 0-2 2v3"></path><path d="M21 21v.01"></path><path d="M12 7v3a2 2 0 0 1-2 2H7"></path><path d="M3 12h.01"></path><path d="M12 3h.01"></path><path d="M12 16v.01"></path><path d="M16 12h1"></path><path d="M21 12v.01"></path><path d="M12 21v-1"></path></svg>
-    </div>
+        <!-- Nearest Bus Overlay -->
+        <div class="nearest-bus-overlay" id="nearestBusOverlay">
+            <span class="nearest-bus-stop-text" id="nearestBusStop">Loading...</span>
+            <svg class="location-pin" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/>
+                <circle cx="12" cy="10" r="3" fill="#fff"/>
+            </svg>
+            <div class="nearest-bus-dropdown" id="nearestBusDropdown"></div>
+        </div>
 
-    <div class="qr-scanner-popup" id="qrScannerPopup">
-        <video id="qr-video"></video>
-        <div class="qr-scan-line"></div>
-        <span class="close-btn" onclick="closeQRScanner()">×</span>
-    </div>
+        <!-- QR Button -->
+        <div class="qr-btn" onclick="openQRScanner()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M14 14h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M10 10h4v4h-4z"/></svg>
+        </div>
 
-    <div class="analysis-page" id="analysisPage">
-        <span class="close-btn" onclick="hideAnalysisPage()">×</span>
-        <h2>Ticket Checker Analytics</h2>
-        <p>Total Challan Collection: Rs5,000</p>
-        <p>Buses Checked: 150</p>
-        <canvas id="histogramCanvas"></canvas>
-    </div>
+        <!-- Side Navbar -->
+        <div class="side-navbar" id="sideNavbar">
+            <h3>Menu</h3>
+            <ul>
+                <li>Previous Bookings</li>
+                <li>Total Savings</li>
+                <li>Profile</li>
+                <li>Support</li>
+                <li>Settings</li>
+            </ul>
+        </div>
 
-    <div class="analysis-page" id="challanPortal">
-        <span class="close-btn" onclick="hideChallanPortal()">×</span>
-        <h2>Bus Challan Portal</h2>
-        <form id="challanForm">
-            <label for="phoneNo">Phone Number:</label><br>
-            <input type="tel" id="phoneNo" name="phoneNo" required><br>
-            <label for="aadharNo">Aadhar Number:</label><br>
-            <input type="text" id="aadharNo" name="aadharNo" required><br>
-            <button type="submit" class="navbar-button">Submit Challan</button>
-        </form>
-    </div>
-
-    <div class="analysis-page" id="attendancePortal">
-        <span class="close-btn" onclick="hideAttendancePortal()">×</span>
-        <h2>Attendance Portal</h2>
-        <form id="attendanceForm">
-            <label for="nearbyBuses">Select Bus:</label><br>
-            <select id="nearbyBuses" name="nearbyBuses" onchange="updateBusDetails()">
-                <option value="">Select a bus</option>
-            </select><br>
-            <label for="busNo">Bus Number:</label><br>
-            <input type="text" id="busNo" name="busNo" required><br>
-            <label for="routeNo">Route No (Route Name):</label><br>
-            <input type="text" id="routeNo" name="routeNo" required><br>
-            <label for="conductorId">Conductor ID Number:</label><br>
-            <input type="text" id="conductorId" name="conductorId" required><br>
-            <label for="conductorWaiver">Conductor Waiver Number:</label><br>
-            <input type="text" id="conductorWaiver" name="conductorWaiver" required><br>
-            <button type="submit" class="navbar-button">Submit Attendance</button>
-        </form>
-    </div>
-
-    <div id="checkModal">
-        <h3>Bus Check Details</h3>
-        <form id="checkForm">
-            <input type="hidden" id="checkBusNo" name="busNo">
-            <input type="hidden" id="checkRouteNo" name="routeNo">
-            <label for="nonTicketHolders">Non-Ticket Holders:</label><br>
-            <input type="number" id="nonTicketHolders" name="nonTicketHolders" min="0" required><br>
-            <label for="fineCollected">Fine Collected (Rs):</label><br>
-            <input type="number" id="fineCollected" name="fineCollected" min="0" step="1" required><br>
-            <div class="button-container">
-                <button type="submit" class="navbar-button">Submit</button>
-                <button type="button" class="navbar-button" onclick="closeCheckModal()">Cancel</button>
+        <!-- QR Scanner and Manual Entry Modal -->
+        <div class="qr-scanner" id="qrScanner">
+            <div class="scanner-box">
+                <video id="qrVideo" autoplay playsinline></video>
+                <div class="scan-line"></div>
             </div>
-        </form>
-    </div>
+            <div class="manual-entry">
+                <h3>Enter bus number</h3>
+                <div class="bus-number-buttons">
+                    <button class="bus-number-btn" onclick="selectBusNumber('DL1PB')">DL1PB</button>
+                    <button class="bus-number-btn" onclick="selectBusNumber('DL1PC')">DL1PC</button>
+                    <button class="bus-number-btn" onclick="selectBusNumber('DL1PD')">DL1PD</button>
+                    <button class="bus-number-btn" onclick="selectBusNumber('DL51GD')"><span>DL51GD</span><span>⚡</span></button>
+                    <button class="bus-number-btn" onclick="selectBusNumber('DL51EV')"><span>DL51EV</span><span>⚡</span></button>
+                </div>
+                <div class="number-inputs">
+                    <input type="text" class="number-input" id="num1" maxlength="1" />
+                    <input type="text" class="number-input" id="num2" maxlength="1" />
+                    <input type="text" class="number-input" id="num3" maxlength="1" />
+                    <input type="text" class="number-input" id="num4" maxlength="1" />
+                </div>
+                <button class="btn" onclick="submitBusNumber()">Proceed</button>
+            </div>
+        </div>
+
+        <!-- Booking Confirmation Modal -->
+        <div class="modal" id="bookingModal">
+            <h3>Booking Confirmed!</h3>
+            <p id="modalDetails">Your ride has been booked successfully.</p>
+            <button class="btn" onclick="closeBookingModal()">Done</button>
+        </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const map = L.map('map', {
-            center: [28.6139, 77.2090], // Default center (Delhi)
+            center: [28.6139, 77.2090],
             zoom: 12,
             zoomControl: false
         });
 
-        L.tileLayer('https://tile.jawg.io/jawg-streets/{z}/{x}/{y}{r}.png?access-token=yY3fr8FU86SQBCMHs2a8Fk3X3ef9sOjQ5yZspu3Bl16bSAjGC6dx4evddIDcMxG5', {
+        L.tileLayer('https://{s}.tile.jawg.io/jawg-streets/{z}/{x}/{y}{r}.png?access-token=yY3fr8FU86SQBCMHs2a8Fk3X3ef9sOjQ5yZspu3Bl16bSAjGC6dx4evddIDcMxG5', {
             attribution: '<a href="https://jawg.io" title="Tiles Courtesy of Jawg Maps" target="_blank">© <b>Jawg</b>Maps</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             minZoom: 0,
-            maxZoom: 22
+            maxZoom: 22,
+            subdomains: 'abcd'
         }).addTo(map);
 
         document.addEventListener('DOMContentLoaded', () => {
-            adjustMapHeight();
+            updateCirclesPosition();
+            initializeCircles();
             map.invalidateSize();
             checkGeolocationPermission();
-            
-            const nonTicketHoldersInput = document.getElementById('nonTicketHolders');
-            const fineCollectedInput = document.getElementById('fineCollected');
-            nonTicketHoldersInput.addEventListener('input', function() {
-                const nonTicketHolders = parseInt(this.value) || 0;
-                const fineAmount = nonTicketHolders * 200;
-                fineCollectedInput.value = fineAmount;
-            });
-
-            document.addEventListener('click', function(event) {
-                const attendancePortal = document.getElementById('attendancePortal');
-                const checkModal = document.getElementById('checkModal');
-
-                if (attendancePortal.classList.contains('active') && 
-                    !attendancePortal.contains(event.target) && 
-                    !event.target.closest('.navbar-button')) {
-                    hideAttendancePortal();
-                }
-
-                if (checkModal.style.display === 'block' && 
-                    !checkModal.contains(event.target) && 
-                    !event.target.closest('input[type="checkbox"]')) {
-                    closeCheckModal();
-                }
-            });
+            fetchAllStops();
         });
 
         const stopIcon = L.divIcon({
             className: 'bus-stop-icon',
-            html: '<svg xmlns="http://www.w3.org/2000/svg" height="12" width="13.5" viewBox="0 0 576 512"><path fill="#1f13c3" d="M288 0C422.4 0 512 35.2 512 80l0 16 0 32c17.7 0 32 14.3 32 32l0 64c0 17.7-14.3 32-32 32l0 160c0 17.7-14.3 32-32 32l0 32c0 17.7-14.3 32-32 32l-32 0c-17.7 0-32-14.3-32-32l0-32-192 0 0 32c0 17.7-14.3 32-32 32l-32 0c-17.7 0-32-14.3-32-32l0-32c-17.7 0-32-14.3-32-32l0-160c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32c0 0 0 0 0 0l0-32s0 0 0 0l0-16C64 35.2 153.6 0 288 0zM128 160l0 96c0 17.7 14.3 32 32 32l112 0 0-160-112 0c-17.7 0-32 14.3-32 32zM304 288l112 0c17.7 0 32-14.3 32-32l0-96c0-17.7-14.3-32-32-32l-112 0 0 160zM144 400a32 32 0 1 0 0-64 32 32 0 1 0 0 64zm288 0a32 32 0 1 0 0-64 32 32 0 1 0 0 64zM384 80c0-8.8-7.2-16-16-16L208 64c-8.8 0-16 7.2-16 16s7.2 16 16 16l160 0c8.8 0 16-7.2 16-16z"/></svg>',
+            html: '<svg xmlns="http://www.w3.org/2000/svg" height="12" width="13.5" viewBox="0 0 576 512"><path fill="#ff0000" d="M288 0C422.4 0 512 35.2 512 80l0 16 0 32c17.7 0 32 14.3 32 32l0 64c0 17.7-14.3 32-32 32l0 160c0 17.7-14.3 32-32 32l0 32c0 17.7-14.3 32-32 32l-32 0c-17.7 0-32-14.3-32-32l0-32-192 0 0 32c0 17.7-14.3 32-32 32l-32 0c-17.7 0-32-14.3-32-32l0-32c-17.7 0-32-14.3-32-32l0-160c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32c0 0 0 0 0 0l0-32s0 0 0 0l0-16C64 35.2 153.6 0 288 0zM128 160l0 96c0 17.7 14.3 32 32 32l112 0 0-160-112 0c-17.7 0-32 14.3-32 32zM304 288l112 0c17.7 0 32-14.3 32-32l0-96c0-17.7-14.3-32-32-32l-112 0 0 160zM144 400a32 32 0 1 0 0-64 32 32 0 1 0 0 64zm288 0a32 32 0 1 0 0-64 32 32 0 1 0 0 64zM384 80c0-8.8-7.2-16-16-16L208 64c-8.8 0-16 7.2-16 16s7.2 16 16 16l160 0c8.8 0 16-7.2 16-16z"/></svg>',
             iconSize: [25, 25],
             iconAnchor: [12.5, 25],
             popupAnchor: [0, -25]
@@ -810,7 +986,7 @@
 
         const userIcon = L.divIcon({
             className: 'user-location-icon',
-            html: '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0000FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle></svg>',
+            html: '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle></svg>',
             iconSize: [35, 35],
             iconAnchor: [17.5, 17.5],
             popupAnchor: [0, 0]
@@ -825,13 +1001,15 @@
         let hasGeoPermission = false;
         const ZOOM_THRESHOLD = 14;
         const BUS_LABEL_SIZE = [60, 18];
-        const updatingBuses = new Set();
+        let nearestStops = [];
+        let circleElements = [];
+        let allStops = [];
 
         const initialBuses = <%- JSON.stringify(buses) %> || [];
         let initialBusStops = <%- JSON.stringify(busStops) %> || [];
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371;
+            const R = 6371000;
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -839,6 +1017,16 @@
                 Math.sin(dLon/2) * Math.sin(dLon/2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             return R * c;
+        }
+
+        function calculateArrivalTime(busDistance) {
+            const speedKmh = 30;
+            const speedMs = speedKmh * 1000 / 3600;
+            const timeSeconds = busDistance / speedMs;
+            const timeMinutes = Math.round(timeSeconds / 60);
+            const now = new Date();
+            now.setMinutes(now.getMinutes() + timeMinutes);
+            return { time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), minutes: timeMinutes };
         }
 
         function findNearestLocations(userLat, userLon, buses, stops) {
@@ -852,18 +1040,61 @@
                 distance: calculateDistance(userLat, userLon, bus.latitude, bus.longitude)
             })).sort((a, b) => a.distance - b.distance);
 
+            nearestStops = stopsWithDistance.slice(0, 4);
+
             return {
                 nearestStop: stopsWithDistance[0] || { name: 'Unknown', distance: 0 },
-                nearestBuses: busesWithDistance.slice(0, 4),
+                nearestBuses: busesWithDistance.slice(0, 3),
                 nearbyStops: stopsWithDistance.slice(0, 3)
             };
+        }
+
+        function updateCirclesPosition() {
+            const navbar = document.getElementById('bottomNavbar');
+            const circles = document.getElementById('floatingCircles');
+            if (navbar.classList.contains('expanded')) {
+                circles.classList.add('navbar-expanded');
+            } else {
+                circles.classList.remove('navbar-expanded');
+            }
+        }
+
+        function initializeCircles() {
+            const circlesDiv = document.getElementById('floatingCircles');
+            circleElements = Array.from(circlesDiv.children);
+            circleElements.forEach((circle, index) => {
+                circle.innerHTML = `
+                    <div class="route-name">Loading...</div>
+                    <div class="bus-no">Loading...</div>
+                    <div class="distance">Loading...</div>
+                `;
+                circle.onclick = (e) => {
+                    e.preventDefault();
+                    if (!circle.classList.contains('clicked')) {
+                        circle.classList.add('clicked');
+                        setTimeout(() => {
+                            circle.classList.add('popped');
+                            setTimeout(() => {
+                                circle.classList.remove('clicked', 'popped');
+                            }, 300);
+                        }, 100);
+                    }
+                    const busNo = circle.getAttribute('data-bus-no');
+                    const routeName = circle.querySelector('.route-name').textContent;
+                    const nearestStopName = document.getElementById('nearestStopName').textContent;
+                    showTicketForm(busNo, routeName, nearestStopName);
+                    if (document.getElementById('bottomNavbar').classList.contains('collapsed')) {
+                        toggleNavbar('ticket');
+                    }
+                };
+            });
         }
 
         function updateNearestDisplay(nearestStop, nearestBuses, nearbyStops) {
             const displayElement = document.querySelector('#locationContent .data');
             let html = `
                 <h3>Nearest Stop: ${nearestStop.name}</h3>
-                <p>Distance: ${nearestStop.distance.toFixed(2)} km</p>
+                <p>Distance: ${(nearestStop.distance / 1000).toFixed(2)} km</p>
                 <h3>Nearest Buses:</h3>
                 <ul style="list-style: none; padding: 0;">
             `;
@@ -872,7 +1103,7 @@
                 html += `
                     <li>
                         Bus ${bus.busNo} (Route: ${bus.routeName})<br>
-                        Distance: ${bus.distance.toFixed(2)} km
+                        Distance: ${(bus.distance / 1000).toFixed(2)} km
                     </li>
                 `;
             });
@@ -880,12 +1111,45 @@
             html += '</ul>';
             displayElement.innerHTML = html;
 
-            document.getElementById('nearest-stop').innerHTML = `Nearest Stop<b> ${nearestStop.name} (${(nearestStop.distance * 1000).toFixed(0)}m)</b>`;
             if (nearestBuses.length > 0) {
-                document.getElementById('bus-arriving').innerHTML = `Bus <b>${nearestBuses[0].busNo} (${nearestBuses[0].routeName})</b>`;
+                const nearestBus = nearestBuses[0];
+                const busDistance = calculateDistance(
+                    nearestBus.latitude, nearestBus.longitude,
+                    nearestStop.latitude, nearestStop.longitude
+                );
+                const { time, minutes } = calculateArrivalTime(busDistance);
+                document.getElementById('busArrival').textContent = `Next bus will arrive in ${minutes} minutes`;
+                document.getElementById('nextBusTime').textContent = time;
+                document.getElementById('arrivalTime').textContent = `(in ${minutes} min)`;
+                document.getElementById('nearestStopName').textContent = nearestStop.name;
+                document.getElementById('routeNameBtn').textContent = nearestBus.routeName;
+                document.getElementById('routeNameBtn').onclick = () => showTicketForm(nearestBus.busNo, nearestBus.routeName, nearestStop.name);
+                document.getElementById('nearestBusStop').textContent = nearestStop.name;
             } else {
-                document.getElementById('bus-arriving').innerText = `Bus Arriving: None`;
+                document.getElementById('busArrival').textContent = 'No buses nearby';
+                document.getElementById('nextBusTime').textContent = 'N/A';
+                document.getElementById('arrivalTime').textContent = 'N/A';
+                document.getElementById('nearestStopName').textContent = 'N/A';
+                document.getElementById('routeNameBtn').textContent = 'N/A';
+                document.getElementById('nearestBusStop').textContent = 'N/A';
             }
+
+            const orderedBuses = [nearestBuses[1] || {}, nearestBuses[0] || {}, nearestBuses[2] || {}];
+            circleElements.forEach((circle, index) => {
+                const bus = orderedBuses[index] || {};
+                circle.setAttribute('data-bus-no', bus.busNo || '');
+                circle.querySelector('.route-name').textContent = bus.routeName || 'Loading...';
+                circle.querySelector('.bus-no').textContent = bus.busNo || 'Loading...';
+                circle.querySelector('.distance').textContent = bus.distance ? `${Math.round(bus.distance)} m` : 'Loading...';
+
+                const isAtStop = nearestStop && bus.latitude && bus.longitude && 
+                    calculateDistance(bus.latitude, bus.longitude, nearestStop.latitude, nearestStop.longitude) < 50;
+                if (isAtStop) {
+                    circle.classList.add('at-stop');
+                } else {
+                    circle.classList.remove('at-stop');
+                }
+            });
 
             if (currentFilter === 'buses') {
                 const tableBody = document.querySelector('#nearestBusesTable tbody');
@@ -896,131 +1160,21 @@
                         row.innerHTML = `
                             <td>${bus.busNo}</td>
                             <td>${bus.routeName}</td>
-                            <td>${bus.distance.toFixed(2)} km</td>
-                            <td class="check-cell" data-bus-no="${bus.busNo}">
-                                ${updatingBuses.has(bus.busNo) ? 'Updating...' : `<input type="checkbox" ${bus.checked ? 'checked' : ''} onchange="handleCheck('${bus.busNo}', this.checked, '${bus.routeNo}')">`}
-                            </td>
+                            <td>${(bus.distance / 1000).toFixed(2)} km</td>
                         `;
                         tableBody.appendChild(row);
                     }
                 });
             }
+
+            updateCirclesPosition();
         }
 
-        function handleCheck(busNo, checked, routeNo) {
-            if (checked) {
-                showCheckModal(busNo, routeNo);
-            }
-        }
-
-        function showCheckModal(busNo, routeNo) {
-            document.getElementById('checkBusNo').value = busNo;
-            document.getElementById('checkRouteNo').value = routeNo;
-            document.getElementById('nonTicketHolders').value = '';
-            document.getElementById('fineCollected').value = '';
-            document.getElementById('checkModal').style.display = 'block';
-        }
-
-        function closeCheckModal() {
-            document.getElementById('checkModal').style.display = 'none';
-        }
-
-        document.getElementById('checkForm').onsubmit = async function(e) {
-            e.preventDefault();
-            const busNo = document.getElementById('checkBusNo').value;
-            const routeNo = document.getElementById('checkRouteNo').value;
-            const nonTicketHolders = parseInt(document.getElementById('nonTicketHolders').value) || 0;
-            const fineCollected = parseInt(document.getElementById('fineCollected').value) || 0;
-
-            const payload = { busNo, routeNo, nonTicketHolders, fineCollected };
-            console.log('Submitting check data:', payload);
-
-            closeCheckModal();
-            updatingBuses.add(busNo);
-            updateNearestDisplay(
-                findNearestLocations(
-                    userMarker ? userMarker.getLatLng().lat : 28.6139,
-                    userMarker ? userMarker.getLatLng().lng : 77.2090,
-                    allBuses,
-                    initialBusStops
-                ).nearestStop,
-                allBuses.map(bus => ({
-                    ...bus,
-                    distance: calculateDistance(
-                        userMarker ? userMarker.getLatLng().lat : 28.6139,
-                        userMarker ? userMarker.getLatLng().lng : 77.2090,
-                        bus.latitude,
-                        bus.longitude
-                    )
-                })).sort((a, b) => a.distance - b.distance).slice(0, 4),
-                initialBusStops.slice(0, 3)
-            );
-
-            const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bus-19wu.onrender.com';
-            try {
-                const response = await fetch(`${baseUrl}/api/checkBus`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                    credentials: 'include'
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-                }
-
-                const result = await response.json();
-                console.log('Server response:', result);
-
-                if (result.success) {
-                    updatingBuses.delete(busNo);
-                    updateNearestDisplay(
-                        findNearestLocations(
-                            userMarker ? userMarker.getLatLng().lat : 28.6139,
-                            userMarker ? userMarker.getLatLng().lng : 77.2090,
-                            allBuses,
-                            initialBusStops
-                        ).nearestStop,
-                        allBuses.map(bus => ({
-                            ...bus,
-                            distance: calculateDistance(
-                                userMarker ? userMarker.getLatLng().lat : 28.6139,
-                                userMarker ? userMarker.getLatLng().lng : 77.2090,
-                                bus.latitude,
-                                bus.longitude
-                            )
-                        })).sort((a, b) => a.distance - b.distance).slice(0, 4),
-                        initialBusStops.slice(0, 3)
-                    );
-                    console.log('Bus check submitted successfully!');
-                } else {
-                    console.error('Error updating bus check:', result.error);
-                    console.log('Error updating bus check: ' + result.error);
-                    updatingBuses.delete(busNo);
-                    const busIndex = allBuses.findIndex(b => b.busNo === busNo);
-                    if (busIndex !== -1) {
-                        allBuses[busIndex].checked = false;
-                        updateBusMarkers(allBuses, initialBusStops);
-                    }
-                }
-            } catch (err) {
-                console.error('Fetch error:', err);
-                alert('Error: ' + err.message);
-                updatingBuses.delete(busNo);
-                const busIndex = allBuses.findIndex(b => b.busNo === busNo);
-                if (busIndex !== -1) {
-                    allBuses[busIndex].checked = false;
-                    updateBusMarkers(allBuses, initialBusStops);
-                }
-            }
-        };
-
-        function generateStopCounter(stopsRemaining, checked) {
+        function generateStopCounter(stopsRemaining) {
             const percentage = (stopsRemaining / 10) * 100;
             return `
                 <div class="stop-counter">
-                    <div class="stop-bar ${checked ? 'checked' : ''}" style="width: ${percentage}%"></div>
+                    <div class="stop-bar" style="width: ${percentage}%"></div>
                 </div>
             `;
         }
@@ -1049,25 +1203,17 @@
             Object.keys(busMarkers).forEach(busNo => {
                 if (!visibleBuses.find(bus => bus.busNo === busNo)) {
                     map.removeLayer(busMarkers[busNo]);
-                    if (stopCircles[busNo]) {
-                        map.removeLayer(stopCircles[busNo]);
-                        delete stopCircles[busNo];
-                    }
                     delete busMarkers[busNo];
                 }
             });
 
             visibleBuses.forEach(bus => {
-                const { busNo, latitude, longitude, routeNo, routeName, checked, stopsRemaining = 0 } = bus;
+                const { busNo, latitude, longitude, routeNo, routeName, stopsRemaining = 0 } = bus;
 
-                const nearbyStop = stops.find(stop => 
-                    calculateDistance(latitude, longitude, stop.latitude, stop.longitude) < 0.05
-                );
-
-                const counterHtml = generateStopCounter(stopsRemaining, checked);
+                const counterHtml = generateStopCounter(stopsRemaining);
                 const busDotIcon = L.divIcon({
                     className: 'bus-dot',
-                    html: `<div style="width: 10px; height: 10px; background: ${checked ? '#00ff00' : '#ff6666'}; border-radius: 50%;"></div>`,
+                    html: `<div style="width: 10px; height: 10px; background: #ff0000; border-radius: 50%;"></div>`,
                     iconSize: [10, 10],
                     iconAnchor: [5, 5]
                 });
@@ -1079,7 +1225,7 @@
                     if (useLabels) {
                         marker.setIcon(L.divIcon({
                             className: 'bus-label-container',
-                            html: `<div class="bus-label ${checked ? 'checked' : ''}">${routeName} (<span class="bus-no">${busNo}</span>)</div>${counterHtml}`,
+                            html: `<div class="bus-label">${routeName} (<span class="bus-no">${busNo}</span>)</div>${counterHtml}`,
                             iconSize: BUS_LABEL_SIZE,
                             iconAnchor: [BUS_LABEL_SIZE[0] / 2, BUS_LABEL_SIZE[1] / 2]
                         }));
@@ -1090,7 +1236,7 @@
                 } else {
                     const icon = useLabels ? L.divIcon({
                         className: 'bus-label-container',
-                        html: `<div class="bus-label ${checked ? 'checked' : ''}">${routeName} (<span class="bus-no">${busNo}</span>)</div>${counterHtml}`,
+                        html: `<div class="bus-label">${routeName} (<span class="bus-no">${busNo}</span>)</div>${counterHtml}`,
                         iconSize: BUS_LABEL_SIZE,
                         iconAnchor: [BUS_LABEL_SIZE[0] / 2, BUS_LABEL_SIZE[1] / 2]
                     }) : busDotIcon;
@@ -1100,22 +1246,6 @@
                         .bindPopup(`Bus: ${busNo}<br>Route: ${routeName}<br>Lat: ${latitude}<br>Lon: ${longitude}<br>Stops Remaining: ${stopsRemaining}`);
 
                     busMarkers[busNo] = marker;
-                }
-
-                if (nearbyStop) {
-                    if (!stopCircles[busNo]) {
-                        stopCircles[busNo] = L.circle([latitude, longitude], {
-                            radius: 50,
-                            color: 'rgba(11, 197, 8, 0.24)',
-                            fillColor: 'rgba(11, 197, 8, 1)',
-                            fillOpacity: 0.3
-                        }).addTo(map);
-                    } else {
-                        stopCircles[busNo].setLatLng([latitude, longitude]);
-                    }
-                } else if (stopCircles[busNo]) {
-                    map.removeLayer(stopCircles[busNo]);
-                    delete stopCircles[busNo];
                 }
             });
 
@@ -1168,9 +1298,6 @@
                     const lat = startLatLng.lat + (endLatLng.lat - startLatLng.lat) * progress;
                     const lng = startLatLng.lng + (endLatLng.lng - startLatLng.lng) * progress;
                     marker.setLatLng([lat, lng]);
-                    if (stopCircles[marker._popup._content.split('<br>')[0].replace('Bus: ', '')]) {
-                        stopCircles[marker._popup._content.split('<br>')[0].replace('Bus: ', '')].setLatLng([lat, lng]);
-                    }
                     requestAnimationFrame(animate);
                 } else {
                     marker.setLatLng(endLatLng);
@@ -1179,80 +1306,27 @@
             requestAnimationFrame(animate);
         }
 
-        function adjustMapHeight() {
+        function toggleNavbar(mode) {
             const navbar = document.getElementById('bottomNavbar');
-            const backSection = document.querySelector('.back');
-            const navbarHeight = navbar.classList.contains('collapsed') ? 90 : 450;
-            backSection.style.height = `calc(100vh - ${navbarHeight}px)`;
-            map.invalidateSize();
-        }
-
-        function toggleNavbar() {
-            const navbar = document.getElementById('bottomNavbar');
-            const analyticsBtn = document.querySelector('.analytics-button');
-            const qrBtn = document.querySelector('.qr-button');
-            const arrowIcon = document.querySelector('.lucide-chevron-up');
+            const arrowIcon = document.querySelector('.bottom-navbar .lucide-chevron-up');
 
             if (navbar.classList.contains('collapsed')) {
                 navbar.classList.remove('collapsed');
                 navbar.classList.add('expanded');
-                analyticsBtn.style.bottom = '470px';
-                qrBtn.style.bottom = '530px';
                 arrowIcon.innerHTML = '<polyline points="18 9 12 15 6 9"></polyline>';
-                filterContent('buses');
+                if (mode !== 'ticket') {
+                    filterContent(mode === 'toggle' ? 'buses' : mode);
+                }
+                const circles = document.querySelectorAll('.bubble-circle');
+                circles.forEach(c => c.classList.add('navbar-expanded'));
             } else {
                 navbar.classList.remove('expanded');
                 navbar.classList.add('collapsed');
-                analyticsBtn.style.bottom = '80px';
-                qrBtn.style.bottom = '140px';
                 arrowIcon.innerHTML = '<polyline points="18 15 12 9 6 15"></polyline>';
+                const circles = document.querySelectorAll('.bubble-circle');
+                circles.forEach(c => c.classList.remove('navbar-expanded'));
             }
-            adjustMapHeight();
-        }
-
-        function showAnalysisPage() {
-            const analysisPage = document.getElementById('analysisPage');
-            analysisPage.classList.add('active');
-            drawHistogram();
-        }
-
-        function hideAnalysisPage() {
-            const analysisPage = document.getElementById('analysisPage');
-            analysisPage.classList.remove('active');
-        }
-
-        async function openQRScanner() {
-            const qrScannerPopup = document.getElementById('qrScannerPopup');
-            const videoElement = document.getElementById('qr-video');
-
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' }
-                });
-                
-                videoElement.srcObject = stream;
-                videoElement.play();
-                qrScannerPopup.classList.add('active');
-                
-                setTimeout(() => {
-                    closeQRScanner();
-                }, 4000);
-            } catch (err) {
-                console.error('Camera access error:', err);
-                alert('Failed to access camera. Please allow camera permissions.');
-            }
-        }
-
-        function closeQRScanner() {
-            const qrScannerPopup = document.getElementById('qrScannerPopup');
-            const videoElement = document.getElementById('qr-video');
-            const stream = videoElement.srcObject;
-            
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                videoElement.srcObject = null;
-            }
-            qrScannerPopup.classList.remove('active');
+            updateCirclesPosition();
         }
 
         function filterContent(type) {
@@ -1277,182 +1351,67 @@
                         updateNearestDisplay(nearest.nearestStop, nearest.nearestBuses, nearest.nearbyStops);
                     }
                     break;
-                case 'analytics':
-                    document.getElementById('analyticsContent').style.display = 'block';
-                    drawNavbarHistogram();
-                    break;
-                case 'scan':
-                    document.getElementById('scanContent').style.display = 'block';
+                case 'ticket':
+                    document.getElementById('ticketContent').style.display = 'block';
                     break;
             }
-            
+        }
+
+        function showTicketForm(busNo, routeName, sourceStop) {
             const navbar = document.getElementById('bottomNavbar');
             if (navbar.classList.contains('collapsed')) {
-                toggleNavbar();
+                toggleNavbar('ticket');
             }
+            filterContent('ticket');
+            document.getElementById('ticketBusNo').value = busNo || '';
+            document.getElementById('ticketRouteName').value = routeName || '';
+            document.getElementById('ticketSourceStop').value = sourceStop || '';
+            document.getElementById('ticketDropStop').value = '';
         }
 
-        function drawHistogram() {
-            const ctx = document.getElementById('histogramCanvas').getContext('2d');
-            if (window.myHistogram) window.myHistogram.destroy();
-
-            const timeSlots = ['00:00-04:00', '04:00-08:00', '08:00-12:00', '12:00-16:00', '16:00-20:00', '20:00-24:00'];
-            const collections = [200, 500, 1200, 1500, 900, 700];
-
-            window.myHistogram = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: timeSlots,
-                    datasets: [{
-                        label: 'Challan Collection (Rs)',
-                        data: collections,
-                        backgroundColor: 'rgba(0, 211, 99, 0.6)',
-                        borderColor: 'rgba(0, 211, 99, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: { beginAtZero: true, title: { display: true, text: 'Collection (Rs)' } },
-                        x: { title: { display: true, text: 'Time of Day' } }
-                    },
-                    plugins: { legend: { labels: { color: 'white' } } }
-                }
-            });
-        }
-
-        function drawNavbarHistogram() {
-            const ctx = document.getElementById('navbarHistogram').getContext('2d');
-            if (window.navbarHistogram) window.navbarHistogram.destroy();
-
-            const timeSlots = ['00-04', '04-08', '08-12', '12-16', '16-20', '20-24'];
-            const collections = [200, 500, 1200, 1500, 900, 700];
-
-            window.navbarHistogram = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: timeSlots,
-                    datasets: [{
-                        label: 'Checks',
-                        data: collections,
-                        backgroundColor: 'rgba(0, 211, 99, 0.6)',
-                        borderColor: 'rgba(0, 211, 99, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: { beginAtZero: true, title: { display: true, text: 'Checks' } },
-                        x: { title: { display: true, text: 'Time' } }
-                    },
-                    plugins: { legend: { labels: { color: 'white' } } }
-                }
-            });
-        }
-
-        function showChallanPortal() {
-            const challanPortal = document.getElementById('challanPortal');
-            challanPortal.classList.add('active');
-        }
-
-        function hideChallanPortal() {
-            const challanPortal = document.getElementById('challanPortal');
-            challanPortal.classList.remove('active');
-        }
-
-        function showAttendancePortal() {
-            const attendancePortal = document.getElementById('attendancePortal');
-            attendancePortal.classList.add('active');
-            
-            if (userMarker && hasGeoPermission) {
-                const userLatLng = userMarker.getLatLng();
-                const nearest = findNearestLocations(userLatLng.lat, userLatLng.lng, allBuses, initialBusStops);
-                populateNearbyBuses(nearest.nearestBuses);
+        function toggleSideNavbar() {
+            const sideNavbar = document.getElementById('sideNavbar');
+            const overlay = document.getElementById('nearestBusOverlay');
+            sideNavbar.classList.toggle('active');
+            if (sideNavbar.classList.contains('active')) {
+                overlay.classList.add('hamburger-active');
             } else {
-                populateNearbyBuses([]);
+                overlay.classList.remove('hamburger-active');
             }
         }
 
-        function hideAttendancePortal() {
-            const attendancePortal = document.getElementById('attendancePortal');
-            attendancePortal.classList.remove('active');
-        }
+        let stream = null;
+        async function openQRScanner() {
+            const qrScanner = document.getElementById('qrScanner');
+            const qrVideo = document.getElementById('qrVideo');
 
-        function populateNearbyBuses(nearbyBuses) {
-            const select = document.getElementById('nearbyBuses');
-            select.innerHTML = '<option value="">Select a bus</option>';
-            
-            nearbyBuses.forEach(bus => {
-                const option = document.createElement('option');
-                option.value = `${bus.busNo}|${bus.routeNo}|${bus.routeName}`;
-                option.text = `Bus ${bus.busNo} - ${bus.routeName} (${bus.distance.toFixed(2)} km)`;
-                select.appendChild(option);
-            });
-
-            if (nearbyBuses.length > 0) {
-                select.value = `${nearbyBuses[0].busNo}|${nearbyBuses[0].routeNo}|${nearbyBuses[0].routeName}`;
-                updateBusDetails();
-            }
-        }
-
-        function updateBusDetails() {
-            const select = document.getElementById('nearbyBuses');
-            const [busNo, routeNo, routeName] = select.value.split('|');
-            
-            if (busNo && routeNo && routeName) {
-                document.getElementById('busNo').value = busNo;
-                document.getElementById('routeNo').value = `${routeNo} (${routeName})`;
-            } else {
-                document.getElementById('busNo').value = '';
-                document.getElementById('routeNo').value = '';
-            }
-        }
-
-        document.getElementById('challanForm').onsubmit = function(e) {
-            e.preventDefault();
-            const phoneNo = document.getElementById('phoneNo').value;
-            const aadharNo = document.getElementById('aadharNo').value;
-            console.log(`Challan submitted for Phone: ${phoneNo}, Aadhar: ${aadharNo}`);
-            hideChallanPortal();
-        };
-
-        document.getElementById('attendanceForm').onsubmit = async function(e) {
-            e.preventDefault();
-            const busNo = document.getElementById('busNo').value;
-            const routeNo = document.getElementById('routeNo').value.split(' (')[0];
-            const conductorId = document.getElementById('conductorId').value;
-            const conductorWaiver = document.getElementById('conductorWaiver').value;
-            
-            const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bus-19wu.onrender.com';
             try {
-                const response = await fetch(`${baseUrl}/api/recordAttendance`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        busNo, 
-                        routeNo, 
-                        conductorId, 
-                        conductorWaiver 
-                    })
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
                 });
-
-                const result = await response.json();
-                if (result.success) {
-                    console.log('Attendance recorded successfully!');
-                    hideAttendancePortal();
-                } else {
-                    alert('Error recording attendance: ' + result.error);
-                }
+                qrVideo.srcObject = stream;
+                qrScanner.classList.add('active');
             } catch (err) {
-                console.error('Error recording attendance:', err);
-                alert('Error: ' + err.message);
+                console.error('Camera access error:', err);
+                alert('Unable to access camera. Please check permissions.');
+                qrScanner.classList.add('active'); // Show manual entry even if QR fails
             }
-        };
+        }
+
+        function closeQRScanner() {
+            const qrScanner = document.getElementById('qrScanner');
+            const qrVideo = document.getElementById('qrVideo');
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            qrVideo.srcObject = null;
+            qrScanner.classList.remove('active');
+        }
 
         function goToUserLocation(attempt = 1, maxAttempts = 3) {
             if (!navigator.geolocation) {
                 console.error('Geolocation is not supported by your browser.');
-                console.log('Geolocation is not supported by your browser.');
                 return;
             }
 
@@ -1471,7 +1430,6 @@
                     hasGeoPermission = true;
                     const nearest = findNearestLocations(lat, lon, allBuses, initialBusStops);
                     updateNearestDisplay(nearest.nearestStop, nearest.nearestBuses, nearest.nearbyStops);
-                    console.log('Geolocation success:', { lat, lon });
                 },
                 error => {
                     console.error('Geolocation error:', error);
@@ -1493,13 +1451,13 @@
                             case error.TIMEOUT:
                                 console.log('Location request timed out. Retrying... Attempt:', attempt);
                                 if (attempt < maxAttempts) {
-                                    setTimeout(() => goToUserLocation(attempt + 1, maxAttempts), 2000); // Retry after 2 seconds
+                                    setTimeout(() => goToUserLocation(attempt + 1, maxAttempts), 2000);
                                 }
                                 break;
                             default:
                                 console.log('Unknown geolocation error. Attempt:', attempt);
                                 if (attempt < maxAttempts) {
-                                    setTimeout(() => goToUserLocation(attempt + 1, maxAttempts), 2000); // Retry after 2 seconds
+                                    setTimeout(() => goToUserLocation(attempt + 1, maxAttempts), 2000);
                                 } else {
                                     console.log('Failed to get your location after multiple attempts. Please check your device settings or try again later.');
                                 }
@@ -1522,7 +1480,7 @@
                     } else {
                         hasGeoPermission = false;
                         console.log('Geolocation permission denied.');
-                        goToUserLocation(); // Attempt to prompt user
+                        goToUserLocation();
                     }
                     result.onchange = () => {
                         hasGeoPermission = result.state === 'granted';
@@ -1536,6 +1494,166 @@
                 goToUserLocation();
             }
         }
+
+        function showMapPage() {
+            updateCirclesPosition();
+            map.invalidateSize();
+            if (hasGeoPermission) {
+                goToUserLocation();
+            }
+        }
+
+        function closeBookingModal() {
+            document.getElementById('bookingModal').classList.remove('active');
+            document.getElementById('ticketSourceStop').value = '';
+            document.getElementById('ticketDropStop').value = '';
+            document.getElementById('ticketBusNo').value = '';
+            document.getElementById('ticketRouteName').value = '';
+            filterContent('buses');
+        }
+
+        async function fetchAllStops() {
+            try {
+                const response = await fetch('/api/all-stops');
+                if (!response.ok) throw new Error('Network response was not ok');
+                allStops = await response.json();
+            } catch (error) {
+                console.error('Error fetching all stops:', error);
+                allStops = <%- JSON.stringify(busStops) %> || [];
+            }
+        }
+
+        function filterStops(query, dropdownId) {
+            const dropdown = document.getElementById(dropdownId);
+            const input = document.getElementById(dropdownId.replace('Dropdown', 'Stop'));
+            if (!query) {
+                dropdown.classList.remove('active');
+                return;
+            }
+            const filteredStops = allStops.filter(stop =>
+                stop.name.toLowerCase().includes(query.toLowerCase())
+            ).slice(0, 10); // Limit to 10 suggestions for performance
+            dropdown.innerHTML = '';
+            filteredStops.forEach(stop => {
+                const item = document.createElement('div');
+                item.className = 'stop-item';
+                item.textContent = stop.name;
+                item.onclick = () => {
+                    if (dropdownId === 'sourceStopDropdown') {
+                        document.getElementById('ticketSourceStop').value = stop.name;
+                    } else if (dropdownId === 'dropStopDropdown') {
+                        document.getElementById('ticketDropStop').value = stop.name;
+                    }
+                    dropdown.classList.remove('active');
+                };
+                dropdown.appendChild(item);
+            });
+            if (filteredStops.length > 0) {
+                dropdown.classList.add('active');
+            } else {
+                dropdown.classList.remove('active');
+            }
+        }
+
+        document.getElementById('ticketSourceStop')?.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            if (query.length >= 2) {
+                filterStops(query, 'sourceStopDropdown');
+            } else {
+                document.getElementById('sourceStopDropdown').classList.remove('active');
+            }
+        });
+
+        document.getElementById('ticketDropStop')?.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            if (query.length >= 2) {
+                filterStops(query, 'dropStopDropdown');
+            } else {
+                document.getElementById('dropStopDropdown').classList.remove('active');
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            const sourceStop = document.getElementById('ticketSourceStop');
+            const sourceDropdown = document.getElementById('sourceStopDropdown');
+            if (sourceStop && sourceStop.contains(e.target)) {
+                // No need to call populateSourceStops here as filterStops handles it
+            } else if (sourceDropdown && !sourceDropdown.contains(e.target)) {
+                sourceDropdown.classList.remove('active');
+            }
+
+            const dropStop = document.getElementById('ticketDropStop');
+            const dropDropdown = document.getElementById('dropStopDropdown');
+            if (dropStop && !dropStop.contains(e.target) && dropDropdown && !dropDropdown.contains(e.target)) {
+                dropDropdown.classList.remove('active');
+            }
+
+            const qrScanner = document.getElementById('qrScanner');
+            if (qrScanner && qrScanner.classList.contains('active') && !qrScanner.contains(e.target) && !e.target.closest('.qr-btn')) {
+                closeQRScanner();
+            }
+
+            const nearestOverlay = document.getElementById('nearestBusOverlay');
+            const nearestDropdown = document.getElementById('nearestBusDropdown');
+            if (nearestOverlay && !nearestOverlay.contains(e.target) && nearestDropdown && nearestDropdown.contains(e.target)) {
+            } else if (nearestOverlay && !nearestOverlay.contains(e.target) && nearestDropdown && nearestDropdown.classList.contains('active')) {
+                nearestDropdown.classList.remove('active');
+            }
+        });
+
+        function toggleNearestBusDropdown() {
+            const dropdown = document.getElementById('nearestBusDropdown');
+            if (!dropdown.classList.contains('active')) {
+                const nearestStop = document.getElementById('nearestStopName').textContent;
+                const content = nearestStops.slice(0, 4).map((stop, index) => `
+                    <div class="nearest-bus-option" onclick="selectNearestStop('${stop.name}', ${index})">
+                        ${stop.name} - ${(stop.distance / 1000).toFixed(2)} km
+                    </div>
+                `).join('');
+                dropdown.innerHTML = content;
+                dropdown.classList.add('active');
+            } else {
+                dropdown.classList.remove('active');
+            }
+        }
+
+        function selectNearestStop(stopName, index) {
+            document.getElementById('nearestStopName').textContent = stopName;
+            document.getElementById('nearestBusStop').textContent = stopName;
+            document.getElementById('nearestBusDropdown').classList.remove('active');
+            showTicketForm('', '', stopName);
+        }
+
+        function selectBusNumber(busNumber) {
+            document.getElementById('ticketBusNo').value = busNumber;
+            closeQRScanner();
+            showTicketForm(busNumber, '', document.getElementById('ticketSourceStop').value || document.getElementById('nearestStopName').textContent);
+        }
+
+        function submitBusNumber() {
+            const num1 = document.getElementById('num1').value;
+            const num2 = document.getElementById('num2').value;
+            const num3 = document.getElementById('num3').value;
+            const num4 = document.getElementById('num4').value;
+            const busNumber = `${num1}${num2}${num3}${num4}`.replace(/[^0-9]/g, '');
+            if (busNumber.length === 4) {
+                document.getElementById('ticketBusNo').value = `DL${busNumber}`;
+                closeQRScanner();
+                showTicketForm(`DL${busNumber}`, '', document.getElementById('ticketSourceStop').value || document.getElementById('nearestStopName').textContent);
+            } else {
+                alert('Please enter a 4-digit number.');
+            }
+        }
+
+        // Auto-focus next input
+        ['num1', 'num2', 'num3', 'num4'].forEach((id, index) => {
+            const input = document.getElementById(id);
+            input.addEventListener('input', () => {
+                if (input.value.length === input.maxLength && index < 3) {
+                    document.getElementById(['num2', 'num3', 'num4', ''][index + 1]).focus();
+                }
+            });
+        });
 
         const socket = io();
         socket.on('connect', () => {
@@ -1561,6 +1679,7 @@
         if (initialBusStops.length > 0 && map.getZoom() >= ZOOM_THRESHOLD) {
             updateBusStopMarkers(initialBusStops);
         }
+        showMapPage();
     </script>
 </body>
 </html>

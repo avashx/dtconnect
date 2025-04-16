@@ -236,6 +236,24 @@ app.get('/', async (req, res) => {
   res.render('index', { buses: busData, busStops: [] });
 });
 
+
+app.get('/api/all-stops', async (req, res) => {
+  try {
+      const stopsCsvString = fs.readFileSync('data/stops.csv', 'utf8');
+      const stops = await parseCSV(stopsCsvString);
+      const stopList = stops.map(row => ({
+          name: row.stop_name || 'Unknown Stop',
+          latitude: parseFloat(row.stop_lat),
+          longitude: parseFloat(row.stop_lon)
+      }));
+      res.json(stopList);
+  } catch (err) {
+      console.error('Error fetching all stops:', err);
+      res.status(500).json({ error: 'Failed to fetch stops' });
+  }
+});
+
+
 // API to update bus check status
 app.post('/api/checkBus', async (req, res) => {
   console.log('Received /api/checkBus request:', req.body);
